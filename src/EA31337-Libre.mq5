@@ -21,6 +21,7 @@
 
 // Includes.
 #include "include/ea.h"
+#include "include/nog/NOGRiskGuard.mqh"
 
 // EA properties.
 #ifdef __MQL4__
@@ -33,6 +34,7 @@
 
 // Global variables.
 EALibre *ea;
+NOGRiskGuard *nog_risk_guard;
 
 /* EA event handler functions */
 
@@ -47,6 +49,7 @@ int OnInit() {
   // Risk params.
   _ea_params.Set(STRUCT_ENUM(EAParams, EA_PARAM_PROP_RISK_MARGIN_MAX), EA_Risk_MarginMax);
   ea = new EALibre(_ea_params);
+  nog_risk_guard = new NOGRiskGuard();
   if (!ea.GetState().IsTradeAllowed()) {
     ea.GetLogger().Error(
         "Trading is not allowed for this symbol, please enable automated trading or check the settings!",
@@ -77,7 +80,14 @@ void OnDeinit(const int reason) { DeinitVars(); }
  *
  * Invoked when a new tick for a symbol is received, to the chart of which the Expert Advisor is attached.
  */
-void OnTick() { ea.OnTick(SymbolInfoStatic::GetTick(_Symbol)); }
+void OnTick() {
+  if (nog_risk_guard == NULL) return;
+  if (!nog_risk_guard.CanTrade(_Symbol, NOG_EnableRiskGuard, NOG_EmergencyStop, NOG_MaxDailyLossPercent,
+                               NOG_MaxDrawdownPercent, NOG_MaxSpreadPoints)) {
+    return;
+  }
+  ea.OnTick(SymbolInfoStatic::GetTick(_Symbol));
+}
 
 #ifdef __MQL5__
 /**
@@ -164,4 +174,10 @@ void OnChartEvent(const int id,          // Event ID.
 /**
  * Deinitialize global class variables.
  */
-void DeinitVars() { Object::Delete(ea); }
+void DeinitVars() {
+  if (nog_risk_guard != NULL) {
+    delete nog_risk_guard;
+    nog_risk_guard = NULL;
+  }
+  Object::Delete(ea);
+}
