@@ -1,10 +1,10 @@
 //+------------------------------------------------------------------+
-//| NOG Small Account EA V3                                         |
-//| EMA trend + pullback + ADX/ATR low-risk MT5 EA                  |
+//| NOG Small Account EA V4                                         |
+//| Trend + pullback EA with improved exits and loss cooldown        |
 //+------------------------------------------------------------------+
 #property strict
-#property version   "3.00"
-#property description "EMA trend/pullback + ADX/ATR low-risk MT5 EA"
+#property version   "4.00"
+#property description "EMA trend/pullback + ADX/ATR low-risk MT5 EA V4"
 
 #include <Trade/Trade.mqh>
 CTrade trade;
@@ -18,7 +18,7 @@ input int InpADXPeriod = 14;
 input double InpMinADX = 17.0;
 input int InpATRPeriod = 14;
 input double InpATRStopMult = 1.5;
-input double InpRiskReward = 1.7;
+input double InpRiskReward = 2.0;
 input bool InpUseCrossEntry = true;
 input bool InpUsePullbackEntry = true;
 input double InpPullbackATRDistance = 0.35;
@@ -28,6 +28,7 @@ input double InpRiskPercent = 0.25;
 input double InpMaxDailyLoss = 1.50;
 input int InpMaxTradesDay = 2;
 input int InpMaxConsecLosses = 2;
+input int InpLossCooldownHours = 12;
 input double InpMaxSpreadPts = 50.0;
 input bool InpEmergencyStop = false;
 
@@ -38,14 +39,14 @@ input int InpSessionEndHour = 21;
 
 input group "Position Management"
 input bool InpUseBreakEven = true;
-input double InpBreakEvenAtR = 1.0;
-input double InpBreakEvenLockR = 0.10;
+input double InpBreakEvenAtR = 1.20;
+input double InpBreakEvenLockR = 0.05;
 input bool InpUseTrailing = true;
-input double InpTrailStartR = 1.30;
-input double InpTrailATRMult = 1.0;
+input double InpTrailStartR = 1.60;
+input double InpTrailATRMult = 1.20;
 
 input group "Execution"
-input ulong InpMagicNumber = 26082603;
+input ulong InpMagicNumber = 26082604;
 input int InpSlippagePoints = 20;
 
 int fast_handle=INVALID_HANDLE;
@@ -57,6 +58,7 @@ datetime last_bar_time=0;
 int current_day_key=0;
 int trades_today=0;
 int consecutive_losses=0;
+datetime loss_cooldown_until=0;
 double day_start_balance=0.0;
 
 int DayKey(){MqlDateTime d;TimeToStruct(TimeCurrent(),d);return d.year*10000+d.mon*100+d.day;}
@@ -67,7 +69,6 @@ void RefreshDailyState(){
       current_day_key=key;
       day_start_balance=AccountInfoDouble(ACCOUNT_BALANCE);
       trades_today=0;
-      consecutive_losses=0;
    }
 }
 
@@ -145,9 +146,9 @@ bool TradingAllowed(){
    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED)) return false;
    if(!MQLInfoInteger(MQL_TRADE_ALLOWED)) return false;
    if(!InSession()) return false;
+   if(loss_cooldown_until>TimeCurrent()) return false;
    if(InpMaxDailyLoss>0.0 && DailyLossPercent()>=InpMaxDailyLoss) return false;
    if(InpMaxTradesDay>0 && trades_today>=InpMaxTradesDay) return false;
-   if(InpMaxConsecLosses>0 && consecutive_losses>=InpMaxConsecLosses) return false;
    if(InpMaxSpreadPts>0.0 && SpreadPoints()>InpMaxSpreadPts) return false;
    if(HasOpenPosition()) return false;
    return true;
@@ -176,10 +177,10 @@ bool OpenTrade(bool buy,double atr){
    double sl=NormalizeDouble(buy?entry-dist:entry+dist,digits);
    double tp=NormalizeDouble(buy?entry+dist*InpRiskReward:entry-dist*InpRiskReward,digits);
    double vol=RiskVolume(entry,sl);
-   if(vol<=0.0){Print("V3 skipped: minimum lot exceeds risk target");return false;}
-   bool ok=buy?trade.Buy(vol,_Symbol,0.0,sl,tp,"NOG V3 BUY"):trade.Sell(vol,_Symbol,0.0,sl,tp,"NOG V3 SELL");
+   if(vol<=0.0){Print("V4 skipped: minimum lot exceeds risk target");return false;}
+   bool ok=buy?trade.Buy(vol,_Symbol,0.0,sl,tp,"NOG V4 BUY"):trade.Sell(vol,_Symbol,0.0,sl,tp,"NOG V4 SELL");
    if(ok){trades_today++;return true;}
-   Print("V3 order failed: ",trade.ResultRetcode()," ",trade.ResultRetcodeDescription());
+   Print("V4 order failed: ",trade.ResultRetcode()," ",trade.ResultRetcodeDescription());
    return false;
 }
 
@@ -249,8 +250,17 @@ void OnTradeTransaction(const MqlTradeTransaction &trans,const MqlTradeRequest &
    ENUM_DEAL_ENTRY e=(ENUM_DEAL_ENTRY)HistoryDealGetInteger(trans.deal,DEAL_ENTRY);
    if(e!=DEAL_ENTRY_OUT && e!=DEAL_ENTRY_OUT_BY) return;
    double pnl=HistoryDealGetDouble(trans.deal,DEAL_PROFIT)+HistoryDealGetDouble(trans.deal,DEAL_SWAP)+HistoryDealGetDouble(trans.deal,DEAL_COMMISSION);
-   if(pnl<0.0) consecutive_losses++;
-   else if(pnl>0.0) consecutive_losses=0;
+   if(pnl<0.0){
+      consecutive_losses++;
+      if(InpMaxConsecLosses>0 && consecutive_losses>=InpMaxConsecLosses){
+         loss_cooldown_until=TimeCurrent()+InpLossCooldownHours*3600;
+         consecutive_losses=0;
+         Print("V4 loss cooldown active until ",TimeToString(loss_cooldown_until,TIME_DATE|TIME_MINUTES));
+      }
+   } else if(pnl>0.0){
+      consecutive_losses=0;
+      loss_cooldown_until=0;
+   }
 }
 
 void OnTick(){
