@@ -40,6 +40,15 @@ input group "Risk management"
 #endif
 input float EA_Risk_MarginMax = 1.0f;  // Max margin to risk (in %)
 
+#ifdef __MQL5__
+input group "NOG Risk Guard"
+input bool NOG_EnableRiskGuard = true;          // Enable NOG safety checks.
+input bool NOG_EmergencyStop = false;           // Block new EA processing immediately.
+input double NOG_MaxDailyLossPercent = 3.0;     // Stop new processing at this daily equity loss (%).
+input double NOG_MaxDrawdownPercent = 10.0;     // Stop new processing at balance-to-equity drawdown (%).
+input double NOG_MaxSpreadPoints = 100.0;       // Maximum spread in symbol points; 0 disables this check.
+#endif
+
 #ifdef __MQL4__
 input string __Logging_Params__ = "-- Logging & messaging --";  // >>> LOGS & MESSAGES <<<
 #else
