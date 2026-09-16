@@ -38,7 +38,7 @@ def load_settings() -> tuple[int, int, float, int]:
     bars = max(1000, int(os.getenv("AI_VALIDATION_BARS", "5000")))
     score = min(6, max(1, int(os.getenv("AI_VALIDATION_SCORE", "5"))))
     dev_fraction = float(os.getenv("AI_VALIDATION_DEV_FRACTION", "0.70"))
-    max_calls = max(1, int(os.getenv("AI_VALIDATION_MAX_CALLS", "20")))
+    max_calls = max(1, int(os.getenv("AI_VALIDATION_MAX_CALLS", "10")))
 
     if not 0.50 <= dev_fraction <= 0.90:
         raise RuntimeError("AI_VALIDATION_DEV_FRACTION harus antara 0.50 dan 0.90")
