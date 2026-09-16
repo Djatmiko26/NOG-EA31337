@@ -2,61 +2,62 @@
 
 Experimental read-only market research system connecting MetaTrader 5 to the OpenAI API.
 
-## Current pipeline
+## Current architecture
 
 ```text
-MetaTrader 5
-    |
-    | CLOSED XAUUSD M5 candle
-    v
-Python indicators
+LIVE RESEARCH
+
+MT5 closed candle
+      |
+      v
 EMA20 / EMA50 / RSI14 / ATR14
-    |
-    v
+      |
+      v
 Deterministic local filter
-spread / ATR / trend / momentum / breakout proximity
-    |
-    +---- setup weak ----------> decisions.csv (OpenAI skipped)
-    |
-    +---- setup qualifies
-             |
-             v
-         OpenAI API
-             |
-             | structured output
-             v
-       BUY / SELL / WAIT
-             |
-             +--> signals.csv
-             +--> decisions.csv
+      |
+      +-- weak setup --> local journal, OpenAI skipped
+      |
+      +-- qualified --> OpenAI structured BUY / SELL / WAIT
+                              |
+                              v
+                     decisions / signals journal
+                              |
+                    after 20 future closed bars
+                              v
+                     outcome_labeller.py
+                              |
+                              v
+                     research_report.py
 
-Later, after 20 future CLOSED bars exist:
+HISTORICAL RESEARCH
 
-decisions.csv + MT5 history
-             |
-             v
-      outcome_labeller.py
-             |
-             v
-         outcomes.csv
-  return 5/10/20 bars + MFE/MAE
+last N closed MT5 bars
+      |
+      v
+historical_replay.py
+      |
+      +-- no-lookahead local-filter replay
+      +-- immediate 5/10/20-bar outcome labels
+      +-- optional capped OpenAI historical sample
+      |
+      v
+replay_report.md
 ```
 
-**No order execution code is present in this version.**
+**No order execution code is present in this branch.**
 
 ## Safety rules
 
-- Never commit `.env`.
-- Never commit an OpenAI API key.
-- Do not enable live trading while this branch is in the research/monitoring phase.
-- OpenAI output is analysis, not a direct order instruction.
+- Never commit `.env` or an OpenAI API key.
+- OpenAI output is research analysis, not a direct order instruction.
 - Risk management and order permission remain local deterministic rules.
-- Planned baseline risk per trade is 0.25%, but no trade execution exists yet.
+- Planned baseline risk per trade is 0.25%, but execution is not implemented yet.
+- Historical OpenAI replay is OFF by default and must have an explicit hard call cap when enabled.
 
 ## Requirements
 
 - Windows
-- MetaTrader 5 terminal
+- MetaTrader 5 terminal, open and connected
 - Python 3.14+
 - OpenAI API key
 
@@ -68,20 +69,20 @@ pip install -r requirements.txt
 
 ## Setup
 
-Create `.env`:
+Create `.env` locally if it does not already exist:
 
 ```powershell
 Copy-Item .env.example .env
 notepad .env
 ```
 
-Minimum required value:
+Minimum value:
 
 ```text
 OPENAI_API_KEY=your_real_key_here
 ```
 
-Default development configuration:
+Current development defaults:
 
 ```text
 OPENAI_MODEL=gpt-5.6-luna
@@ -91,11 +92,7 @@ TIMEFRAME=M5
 POLL_SECONDS=5
 CANDLES_TO_LOAD=120
 CANDLES_TO_AI=30
-```
 
-V3 local-filter defaults:
-
-```text
 FILTER_ENABLED=true
 FILTER_LOOKBACK=12
 FILTER_MIN_SCORE=4
@@ -105,157 +102,149 @@ FILTER_BREAKOUT_BUFFER_ATR=0.25
 FILTER_MIN_EMA_GAP_ATR=0.10
 FILTER_RSI_BULL=52
 FILTER_RSI_BEAR=48
+
+REPLAY_BARS=5000
+REPLAY_WARMUP_BARS=200
+REPLAY_OPENAI=false
+REPLAY_MAX_AI_CALLS=20
 ```
 
-These are **research defaults**, not proven profitable parameters. They must be evaluated with collected data before any demo execution work.
+These are research defaults, not proven profitable parameters.
 
-## Run monitor
+## Live monitor
 
-Keep MT5 open and logged into the demo account:
+Run:
 
 ```powershell
 python market_monitor.py
 ```
 
-Stop safely:
+It processes only newly CLOSED candles and creates local runtime files such as:
 
 ```text
-Ctrl+C
+data/signals.csv
+data/decisions.csv
+logs/market_monitor.log
 ```
 
-## Run V4 outcome labelling
+The current development terminal has detected MetaQuotes demo server time at approximately `UTC+3`; the program stores the raw MT5 candle epoch, server wall-clock time, and normalized UTC separately.
 
-The outcome labeller does not call OpenAI and does not place orders. It reads `decisions.csv`, waits until at least 20 future **closed** bars exist, retrieves those bars from MT5, and appends research labels to `outcomes.csv`.
+## Outcome labelling
 
-Run:
+Run after live decisions have at least 20 future closed bars:
 
 ```powershell
 python outcome_labeller.py
 ```
 
-A recent decision may correctly produce:
+Output:
 
 ```text
-new_labels=0 | pending_for_20_bars=1
-```
-
-That simply means 20 future closed candles do not exist yet. Re-run the labeller later.
-
-## Runtime files
-
-```text
-data/signals.csv
-data/decisions.csv
 data/outcomes.csv
-logs/market_monitor.log
 ```
 
-All are ignored by Git.
+For each matured decision it measures:
 
-### `decisions.csv`
+- close after 5, 10 and 20 future bars;
+- raw market return;
+- local-filter directional return;
+- OpenAI directional return for BUY/SELL;
+- 20-bar MFE and MAE.
 
-Records **every processed closed candle**, including candles where OpenAI was skipped. It contains:
+No arbitrary SL/TP assumption is silently inserted.
 
-- raw MT5 candle epoch
-- broker/server wall-clock time
-- normalized UTC time
-- indicator values
-- spread
-- local filter result
-- bullish/bearish setup scores
-- whether OpenAI was called
-- OpenAI result when applicable
+## Research report
 
-This is the source journal for research.
+Run:
 
-### `signals.csv`
+```powershell
+python research_report.py
+```
 
-Records only candles that passed the local filter and were sent to OpenAI.
-
-### `outcomes.csv`
-
-V4 records only decisions that have at least 20 future closed bars available. For each matured decision it stores:
-
-- entry close and ATR14
-- local filter direction and scores
-- OpenAI action/confidence/regime when available
-- future close after 5, 10, and 20 bars
-- raw market return after 5, 10, and 20 bars
-- direction-adjusted local-filter return
-- direction-adjusted OpenAI return
-- highest/lowest price during the next 20 bars
-- MFE/MAE for the long market direction
-- direction-adjusted MFE/MAE for the local filter
-- direction-adjusted MFE/MAE for OpenAI BUY/SELL signals
-
-`WAIT` and locally skipped decisions deliberately have blank direction-adjusted metrics where no BUY/SELL direction exists.
-
-## Local filter V3
-
-The filter is deliberately deterministic and inspectable. It checks:
-
-- ATR relative to price
-- spread relative to ATR
-- EMA20/EMA50 alignment
-- close relative to EMA20
-- RSI direction
-- last-bar momentum
-- EMA separation relative to ATR
-- proximity to the previous lookback high/low
-
-Bullish and bearish conditions each receive a score. By default the strongest direction needs at least `4` of `6` conditions. A tied, weak, low-volatility, or expensive-spread setup is skipped locally.
-
-The filter does **not** place orders and does **not** decide position size.
-
-## MT5 server time handling
-
-During V2 development, the MetaQuotes demo terminal exposed candle times roughly three hours ahead of real UTC. V3 therefore:
-
-1. keeps the original MT5 epoch as candle identity;
-2. records broker/server wall-clock time separately;
-3. estimates the server-to-UTC offset from live tick time;
-4. stores a normalized UTC timestamp.
-
-On the current development terminal, V3 detected `+3.0h`. Continue observing this across trading sessions before adding London/New York session rules.
-
-V4 uses the original raw MT5 candle epoch as the history key so outcome matching is independent of display timezone.
-
-## Outcome definitions
-
-For a decision at entry close `P0`, the 5-bar outcome uses the close of the **fifth future closed bar**, not the current/forming bar. The same rule applies to 10 and 20 bars.
-
-Raw market return is long-oriented:
+Output:
 
 ```text
-(exit - entry) / entry * 100
+data/research_report.md
 ```
 
-Direction-adjusted return:
+It reports:
 
-- BUY: same as raw market return
-- SELL: sign is inverted
-- WAIT/NONE: blank
+- local-filter qualification rate;
+- OpenAI API call/skip rate;
+- local directional performance;
+- OpenAI BUY/SELL directional performance;
+- confidence buckets;
+- market regime groups;
+- local-filter vs OpenAI agreement.
 
-MFE (maximum favorable excursion) is never below zero. MAE (maximum adverse excursion) is never above zero. Both are measured over the next 20 closed bars.
+Small samples are explicitly flagged.
 
-V4 intentionally does **not** simulate SL/TP yet because SL/TP rules have not been validated. ATR-based SL/TP research will be added only as an explicit, configurable experiment rather than silently assuming arbitrary distances.
+## Historical replay
+
+Historical replay accelerates research without waiting for live candles.
+
+Safe first run:
+
+```text
+REPLAY_OPENAI=false
+REPLAY_BARS=5000
+REPLAY_WARMUP_BARS=200
+```
+
+Then:
+
+```powershell
+python historical_replay.py
+```
+
+Outputs:
+
+```text
+data/replay_decisions.csv
+data/replay_outcomes.csv
+data/replay_report.md
+```
+
+### No-lookahead rule
+
+For historical decision bar `i`:
+
+- decision inputs use only bars `<= i`;
+- when historical OpenAI is enabled, the API payload also contains only bars `<= i`;
+- bars `i+1 ... i+20` are reserved strictly for outcome measurement.
+
+### Optional capped historical OpenAI sample
+
+Only after inspecting the local-only replay, optionally set:
+
+```text
+REPLAY_OPENAI=true
+REPLAY_MAX_AI_CALLS=20
+```
+
+The replay first finds all local-filter candidates and then samples up to the hard cap across the whole historical replay period. It does not call OpenAI on every candidate.
+
+More detail: `REPLAY.md`.
 
 ## Tests
 
-Run all deterministic tests from the `ai_trader` directory:
+Run from `ai_trader`:
 
 ```powershell
 python -m unittest discover -s tests -v
 ```
 
-Current tests cover:
+Tests currently cover:
 
-- bullish filter candidate
-- excessive spread skip
-- low-volatility skip
-- BUY/SELL directional return sign
-- BUY/SELL MFE/MAE direction
-- correct 5th/10th/20th future-bar selection
+- local-filter bullish candidate;
+- high-spread rejection;
+- low-volatility rejection;
+- BUY/SELL directional return sign;
+- BUY/SELL MFE/MAE direction;
+- correct 5th/10th/20th future-bar outcome selection;
+- research-report statistics and grouping;
+- historical replay warmup/future-bar boundaries;
+- capped, deterministic historical OpenAI sampling.
 
 ## Development roadmap
 
@@ -264,57 +253,48 @@ Current tests cover:
 - MT5 -> Python
 - Python -> OpenAI
 - XAUUSD M5 closed-candle retrieval
-- structured `BUY / SELL / WAIT`
+- structured BUY / SELL / WAIT
 
 ### V2 - Continuous monitor ✅
 
-- process only newly closed candles
-- one OpenAI call per processed candle
-- CSV signal journal
-- runtime logging
-- restart/resume protection
+- new closed candle detection
+- one OpenAI request per accepted live candle
+- journals and restart/resume
 
 ### V3 - Local setup filter ✅ initial implementation
 
 - spread/ATR gate
 - volatility gate
-- trend/momentum scoring
+- trend/momentum score
 - breakout proximity
 - OpenAI skip path
-- every-candle decision journal
-- broker/server vs UTC timestamp separation
-- unit tests
+- server-time separation
 
-Still pending in V3:
+Still to validate:
 
-- validate detected broker clock offset over a full trading day
-- add session filter only after time validation
-- tune thresholds from data rather than intuition
+- broker clock offset through session/day changes;
+- session filter only after time validation;
+- filter thresholds from larger data.
 
-### V4 - Outcome labelling / research ✅ initial implementation
+### V4 - Outcome / research ✅ expanded
 
-- mature decisions only after 20 future closed bars
-- future close after 5/10/20 bars
-- raw market returns
-- direction-adjusted local-filter returns
-- direction-adjusted OpenAI returns
-- 20-bar MFE/MAE
-- duplicate-label protection
-- unit tests for outcome maths
+- 5/10/20-bar outcome labelling
+- MFE/MAE
+- aggregate research report
+- confidence/regime/agreement analysis
+- historical no-lookahead replay
+- safe capped historical OpenAI sampling
 
-Still pending in V4:
+Next research work:
 
-- aggregate performance report by local score
-- performance by OpenAI action
-- performance by confidence bucket
-- performance by market regime
-- API-call reduction report
-- optional explicit ATR-based SL/TP simulation
-- larger historical/replay dataset
+- run larger local historical samples;
+- compare multiple non-overlapping historical windows;
+- add explicit train/development vs unseen validation periods;
+- only then evaluate ATR SL/TP experiments.
 
 ### V5 - Risk engine
 
-Deterministic local controls:
+Planned deterministic controls:
 
 - 0.25% risk per trade
 - maximum daily loss
@@ -326,7 +306,7 @@ Deterministic local controls:
 
 ### V6 - Demo execution
 
-Only after research metrics justify it:
+Only after research evidence is adequate:
 
 - EA/API bridge
 - demo orders only
@@ -336,7 +316,7 @@ Only after research metrics justify it:
 
 ### V7 - Walk-forward validation
 
-Validate on unseen periods before considering a small live account.
+Validate on unseen periods before any small live account is considered.
 
 ## Branch
 
@@ -344,4 +324,4 @@ Validate on unseen periods before considering a small live account.
 openai-trader-v1
 ```
 
-Created from `small-account-v1` so the existing small-account development remains preserved.
+Created from `small-account-v1`, preserving the earlier small-account development.
