@@ -14,12 +14,20 @@ import pandas as pd
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from strategy_filter import FilterConfig, FilterDecision, evaluate_setup
+
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 LOG_DIR = BASE_DIR / "logs"
 SIGNALS_FILE = DATA_DIR / "signals.csv"
+DECISIONS_FILE = DATA_DIR / "decisions.csv"
 LOG_FILE = LOG_DIR / "market_monitor.log"
+
+# MT5 brokers can expose bar timestamps aligned to broker/server wall-clock
+# rather than real UTC. We keep the original epoch for candle identity and
+# derive normalized UTC for research/session analysis.
+SERVER_UTC_OFFSET_SECONDS = 0
 
 
 TIMEFRAME_MAP = {
@@ -42,6 +50,8 @@ class Config:
     candles_to_load: int
     candles_to_ai: int
     openai_model: str
+    filter_enabled: bool
+    filter_config: FilterConfig
 
 
 def log(message: str) -> None:
@@ -52,6 +62,22 @@ def log(message: str) -> None:
     LOG_DIR.mkdir(parents=True, exist_ok=True)
     with LOG_FILE.open("a", encoding="utf-8") as fh:
         fh.write(line + "\n")
+
+
+def env_bool(name: str, default: bool) -> bool:
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+
+    value = raw.strip().lower()
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+
+    raise RuntimeError(
+        f"{name} harus berupa true/false, yes/no, on/off, atau 1/0."
+    )
 
 
 def load_config() -> Config:
@@ -84,6 +110,34 @@ def load_config() -> Config:
     if candles_to_ai > candles_to_load:
         raise RuntimeError("CANDLES_TO_AI tidak boleh melebihi CANDLES_TO_LOAD.")
 
+    filter_config = FilterConfig(
+        lookback=max(5, int(os.getenv("FILTER_LOOKBACK", "12"))),
+        min_score=max(1, int(os.getenv("FILTER_MIN_SCORE", "4"))),
+        min_atr_ratio=max(
+            0.0,
+            float(os.getenv("FILTER_MIN_ATR_RATIO", "0.00035")),
+        ),
+        max_spread_atr_ratio=max(
+            0.0,
+            float(os.getenv("FILTER_MAX_SPREAD_ATR_RATIO", "0.12")),
+        ),
+        breakout_buffer_atr=max(
+            0.0,
+            float(os.getenv("FILTER_BREAKOUT_BUFFER_ATR", "0.25")),
+        ),
+        min_ema_gap_atr=max(
+            0.0,
+            float(os.getenv("FILTER_MIN_EMA_GAP_ATR", "0.10")),
+        ),
+        rsi_bull=float(os.getenv("FILTER_RSI_BULL", "52")),
+        rsi_bear=float(os.getenv("FILTER_RSI_BEAR", "48")),
+    )
+
+    if filter_config.min_score > 6:
+        raise RuntimeError("FILTER_MIN_SCORE maksimum 6.")
+    if filter_config.rsi_bear >= filter_config.rsi_bull:
+        raise RuntimeError("FILTER_RSI_BEAR harus lebih kecil dari FILTER_RSI_BULL.")
+
     return Config(
         mt5_path=mt5_path,
         symbol=symbol,
@@ -93,7 +147,33 @@ def load_config() -> Config:
         candles_to_load=candles_to_load,
         candles_to_ai=candles_to_ai,
         openai_model=os.getenv("OPENAI_MODEL", "gpt-5.6-luna").strip(),
+        filter_enabled=env_bool("FILTER_ENABLED", True),
+        filter_config=filter_config,
     )
+
+
+def detect_server_utc_offset_seconds(config: Config) -> int:
+    """Estimate broker/server clock offset relative to real UTC."""
+    tick = mt5.symbol_info_tick(config.symbol)
+    if tick is None or int(tick.time) <= 0:
+        log("WARNING: tick time unavailable; assuming MT5 server offset=0h.")
+        return 0
+
+    delta = int(tick.time) - int(time.time())
+
+    # Broker server offsets are normally hour/half-hour aligned. Rounding
+    # prevents network/processing seconds from polluting the estimate.
+    half_hour = 30 * 60
+    rounded = int(round(delta / half_hour) * half_hour)
+
+    if abs(rounded) > 14 * 60 * 60:
+        log(
+            "WARNING: detected MT5 clock offset outside +/-14h; "
+            "assuming offset=0h."
+        )
+        return 0
+
+    return rounded
 
 
 def connect_mt5(config: Config) -> None:
@@ -112,18 +192,31 @@ def connect_mt5(config: Config) -> None:
             "Periksa nama symbol di Market Watch."
         )
 
+    symbol_info = mt5.symbol_info(config.symbol)
+    if symbol_info is None or symbol_info.point <= 0:
+        mt5.shutdown()
+        raise RuntimeError(
+            f"Gagal membaca specification symbol {config.symbol}: {mt5.last_error()}"
+        )
+
+    global SERVER_UTC_OFFSET_SECONDS
+    SERVER_UTC_OFFSET_SECONDS = detect_server_utc_offset_seconds(config)
+
     # Monitor ini sengaja READ-ONLY. trade_allowed tidak dibutuhkan.
     log(
         f"MT5 connected | symbol={config.symbol} | "
-        f"timeframe={config.timeframe_name} | trade_execution=DISABLED_BY_DESIGN"
+        f"timeframe={config.timeframe_name} | "
+        f"point={symbol_info.point} | "
+        f"detected_server_utc_offset={SERVER_UTC_OFFSET_SECONDS / 3600:+.1f}h | "
+        "trade_execution=DISABLED_BY_DESIGN"
     )
 
 
-def get_latest_closed_candle_time(config: Config) -> int:
+def get_latest_closed_candle_epoch_raw(config: Config) -> int:
     rates = mt5.copy_rates_from_pos(
         config.symbol,
         config.timeframe,
-        1,  # 0 = candle yang masih berjalan; 1 = candle terakhir yang sudah tutup
+        1,  # 0 = candle berjalan; 1 = candle terakhir yang sudah tutup
         1,
     )
     if rates is None or len(rates) == 0:
@@ -147,8 +240,19 @@ def load_closed_candles(config: Config) -> pd.DataFrame:
         )
 
     df = pd.DataFrame(rates)
-    df["time"] = pd.to_datetime(df["time"], unit="s", utc=True)
-    df = df.sort_values("time").reset_index(drop=True)
+    df["server_epoch_raw"] = df["time"].astype("int64")
+
+    # server_time preserves the wall-clock value exposed by MT5.
+    df["server_time"] = pd.to_datetime(df["server_epoch_raw"], unit="s")
+
+    # time is normalized UTC for research and future session filters.
+    df["time"] = pd.to_datetime(
+        df["server_epoch_raw"] - SERVER_UTC_OFFSET_SECONDS,
+        unit="s",
+        utc=True,
+    )
+
+    df = df.sort_values("server_epoch_raw").reset_index(drop=True)
     return df
 
 
@@ -183,7 +287,11 @@ def add_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
-def build_market_payload(config: Config, df: pd.DataFrame) -> dict[str, Any]:
+def build_market_payload(
+    config: Config,
+    df: pd.DataFrame,
+    filter_decision: FilterDecision,
+) -> dict[str, Any]:
     ai_df = df.tail(config.candles_to_ai).copy()
     ai_df["time"] = ai_df["time"].dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -206,7 +314,15 @@ def build_market_payload(config: Config, df: pd.DataFrame) -> dict[str, Any]:
     return {
         "symbol": config.symbol,
         "timeframe": config.timeframe_name,
-        "latest_closed_candle": ai_df.iloc[-1]["time"],
+        "latest_closed_candle_utc": ai_df.iloc[-1]["time"],
+        "detected_server_utc_offset_hours": SERVER_UTC_OFFSET_SECONDS / 3600,
+        "local_filter": {
+            "candidate_direction": filter_decision.direction,
+            "bull_score": filter_decision.bull_score,
+            "bear_score": filter_decision.bear_score,
+            "reason": filter_decision.reason,
+            "metrics": filter_decision.metrics,
+        },
         "candles": ai_df.to_dict(orient="records"),
     }
 
@@ -222,6 +338,8 @@ def ask_openai(
             "You are a market-analysis component inside an experimental "
             "trading research system. Analyze ONLY the supplied OHLC market "
             "data and indicators. The final row is the latest CLOSED candle. "
+            "The local_filter block is a deterministic pre-filter and is only "
+            "context; independently verify the setup from the supplied data. "
             "Do not assume knowledge of prices after that candle. Do not use "
             "outside market information. Do not invent news or economic events. "
             "BUY means the supplied data currently shows a bullish setup. "
@@ -280,6 +398,8 @@ def ask_openai(
     return signal
 
 
+# Keep the V2 signals.csv schema backward compatible. V3 filter metadata is
+# recorded in decisions.csv.
 SIGNAL_FIELDS = [
     "logged_at_utc",
     "candle_time_utc",
@@ -291,6 +411,34 @@ SIGNAL_FIELDS = [
     "rsi14",
     "atr14",
     "spread",
+    "action",
+    "confidence",
+    "market_regime",
+    "reason",
+    "model",
+]
+
+
+DECISION_FIELDS = [
+    "logged_at_utc",
+    "candle_epoch_raw",
+    "candle_time_server",
+    "candle_time_utc",
+    "symbol",
+    "timeframe",
+    "close",
+    "ema20",
+    "ema50",
+    "rsi14",
+    "atr14",
+    "spread",
+    "filter_enabled",
+    "filter_qualifies",
+    "filter_direction",
+    "filter_bull_score",
+    "filter_bear_score",
+    "filter_reason",
+    "openai_called",
     "action",
     "confidence",
     "market_regime",
@@ -332,30 +480,111 @@ def append_signal(
         writer.writerow(row)
 
 
-def get_last_logged_candle_epoch(config: Config) -> int | None:
-    if not SIGNALS_FILE.exists():
-        return None
+def append_decision(
+    config: Config,
+    latest: pd.Series,
+    filter_decision: FilterDecision,
+    *,
+    openai_called: bool,
+    signal: dict[str, Any] | None,
+) -> None:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    exists = DECISIONS_FILE.exists()
 
-    try:
-        history = pd.read_csv(SIGNALS_FILE)
-        if history.empty:
-            return None
+    row = {
+        "logged_at_utc": datetime.now(timezone.utc).isoformat(),
+        "candle_epoch_raw": int(latest["server_epoch_raw"]),
+        "candle_time_server": latest["server_time"].isoformat(),
+        "candle_time_utc": latest["time"].isoformat(),
+        "symbol": config.symbol,
+        "timeframe": config.timeframe_name,
+        "close": round(float(latest["close"]), 5),
+        "ema20": round(float(latest["ema20"]), 5),
+        "ema50": round(float(latest["ema50"]), 5),
+        "rsi14": round(float(latest["rsi14"]), 5),
+        "atr14": round(float(latest["atr14"]), 5),
+        "spread": int(latest["spread"]),
+        "filter_enabled": config.filter_enabled,
+        "filter_qualifies": filter_decision.qualifies,
+        "filter_direction": filter_decision.direction,
+        "filter_bull_score": filter_decision.bull_score,
+        "filter_bear_score": filter_decision.bear_score,
+        "filter_reason": filter_decision.reason,
+        "openai_called": openai_called,
+        "action": "" if signal is None else signal["action"],
+        "confidence": "" if signal is None else int(signal["confidence"]),
+        "market_regime": "" if signal is None else signal["market_regime"],
+        "reason": filter_decision.reason if signal is None else signal["reason"],
+        "model": "" if signal is None else config.openai_model,
+    }
 
-        subset = history[
-            (history["symbol"] == config.symbol)
-            & (history["timeframe"] == config.timeframe_name)
-        ]
-        if subset.empty:
-            return None
+    with DECISIONS_FILE.open("a", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=DECISION_FIELDS)
+        if not exists:
+            writer.writeheader()
+        writer.writerow(row)
 
-        value = pd.to_datetime(
-            subset.iloc[-1]["candle_time_utc"],
-            utc=True,
+
+def get_last_processed_candle_epoch_raw(config: Config) -> int | None:
+    if DECISIONS_FILE.exists():
+        try:
+            history = pd.read_csv(DECISIONS_FILE)
+            subset = history[
+                (history["symbol"] == config.symbol)
+                & (history["timeframe"] == config.timeframe_name)
+            ]
+            if not subset.empty:
+                return int(subset.iloc[-1]["candle_epoch_raw"])
+        except Exception as exc:
+            log(f"WARNING: gagal membaca state dari decisions.csv: {exc}")
+
+    # Upgrade path from V2: its candle_time_utc column actually preserved the
+    # raw MT5 wall-clock epoch on the development terminal. Parse it only as a
+    # fallback until V3 writes decisions.csv.
+    if SIGNALS_FILE.exists():
+        try:
+            history = pd.read_csv(SIGNALS_FILE)
+            subset = history[
+                (history["symbol"] == config.symbol)
+                & (history["timeframe"] == config.timeframe_name)
+            ]
+            if not subset.empty:
+                value = pd.to_datetime(
+                    subset.iloc[-1]["candle_time_utc"],
+                    utc=True,
+                )
+                return int(value.timestamp())
+        except Exception as exc:
+            log(f"WARNING: gagal membaca legacy state dari signals.csv: {exc}")
+
+    return None
+
+
+def get_filter_decision(
+    config: Config,
+    df: pd.DataFrame,
+) -> FilterDecision:
+    if not config.filter_enabled:
+        return FilterDecision(
+            qualifies=True,
+            direction="NONE",
+            bull_score=0,
+            bear_score=0,
+            reason="LOCAL_FILTER disabled; OpenAI call allowed for research.",
+            metrics={},
         )
-        return int(value.timestamp())
-    except Exception as exc:
-        log(f"WARNING: gagal membaca state dari signals.csv: {exc}")
-        return None
+
+    symbol_info = mt5.symbol_info(config.symbol)
+    if symbol_info is None or symbol_info.point <= 0:
+        raise RuntimeError(
+            f"Gagal membaca point untuk {config.symbol}: {mt5.last_error()}"
+        )
+
+    return evaluate_setup(
+        df,
+        point=float(symbol_info.point),
+        config=config.filter_config,
+    )
 
 
 def process_new_candle(
@@ -364,28 +593,61 @@ def process_new_candle(
 ) -> int:
     df = add_indicators(load_closed_candles(config))
     latest = df.iloc[-1]
-    candle_epoch = int(latest["time"].timestamp())
-
-    market_data = build_market_payload(config, df)
+    candle_epoch_raw = int(latest["server_epoch_raw"])
 
     log(
         "New closed candle | "
-        f"time={latest['time'].isoformat()} | close={latest['close']:.5f} | "
+        f"server_time={latest['server_time'].isoformat()} | "
+        f"utc={latest['time'].isoformat()} | "
+        f"close={latest['close']:.5f} | "
         f"ema20={latest['ema20']:.5f} | ema50={latest['ema50']:.5f} | "
-        f"rsi14={latest['rsi14']:.2f} | atr14={latest['atr14']:.5f}"
+        f"rsi14={latest['rsi14']:.2f} | atr14={latest['atr14']:.5f} | "
+        f"spread={int(latest['spread'])}"
     )
 
+    filter_decision = get_filter_decision(config, df)
+
+    log(
+        "Local filter | "
+        f"pass={filter_decision.qualifies} | "
+        f"candidate={filter_decision.direction} | "
+        f"bull={filter_decision.bull_score} | "
+        f"bear={filter_decision.bear_score} | "
+        f"reason={filter_decision.reason}"
+    )
+
+    if not filter_decision.qualifies:
+        append_decision(
+            config,
+            latest,
+            filter_decision,
+            openai_called=False,
+            signal=None,
+        )
+        log(f"OpenAI skipped | Saved decision: {DECISIONS_FILE}")
+        return candle_epoch_raw
+
+    market_data = build_market_payload(config, df, filter_decision)
     signal = ask_openai(client, config, market_data)
+
     append_signal(config, latest, signal)
+    append_decision(
+        config,
+        latest,
+        filter_decision,
+        openai_called=True,
+        signal=signal,
+    )
 
     log(
         "OpenAI signal | "
         f"action={signal['action']} | confidence={signal['confidence']} | "
         f"regime={signal['market_regime']} | reason={signal['reason']}"
     )
-    log(f"Saved: {SIGNALS_FILE}")
+    log(f"Saved signal: {SIGNALS_FILE}")
+    log(f"Saved decision: {DECISIONS_FILE}")
 
-    return candle_epoch
+    return candle_epoch_raw
 
 
 def main() -> None:
@@ -397,13 +659,19 @@ def main() -> None:
 
     connect_mt5(config)
 
-    last_processed = get_last_logged_candle_epoch(config)
+    last_processed = get_last_processed_candle_epoch_raw(config)
 
     if last_processed is None:
-        log("Belum ada signal log. Candle tertutup terbaru akan dianalisis sekali.")
+        log("Belum ada state log. Candle tertutup terbaru akan diproses sekali.")
     else:
-        last_dt = datetime.fromtimestamp(last_processed, tz=timezone.utc)
-        log(f"Resume state | last_logged_candle={last_dt.isoformat()}")
+        log(f"Resume state | last_processed_raw_epoch={last_processed}")
+
+    log(
+        f"Local filter | enabled={config.filter_enabled} | "
+        f"lookback={config.filter_config.lookback} | "
+        f"min_score={config.filter_config.min_score} | "
+        f"max_spread_atr={config.filter_config.max_spread_atr_ratio}"
+    )
 
     log(
         f"Monitor started | poll={config.poll_seconds}s | "
@@ -413,7 +681,7 @@ def main() -> None:
     try:
         while True:
             try:
-                latest_closed = get_latest_closed_candle_time(config)
+                latest_closed = get_latest_closed_candle_epoch_raw(config)
 
                 if latest_closed != last_processed:
                     last_processed = process_new_candle(client, config)
