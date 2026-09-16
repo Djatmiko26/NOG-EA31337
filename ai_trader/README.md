@@ -29,6 +29,17 @@ spread / ATR / trend / momentum / breakout proximity
              |
              +--> signals.csv
              +--> decisions.csv
+
+Later, after 20 future CLOSED bars exist:
+
+decisions.csv + MT5 history
+             |
+             v
+      outcome_labeller.py
+             |
+             v
+         outcomes.csv
+  return 5/10/20 bars + MFE/MAE
 ```
 
 **No order execution code is present in this version.**
@@ -98,7 +109,7 @@ FILTER_RSI_BEAR=48
 
 These are **research defaults**, not proven profitable parameters. They must be evaluated with collected data before any demo execution work.
 
-## Run
+## Run monitor
 
 Keep MT5 open and logged into the demo account:
 
@@ -112,11 +123,30 @@ Stop safely:
 Ctrl+C
 ```
 
+## Run V4 outcome labelling
+
+The outcome labeller does not call OpenAI and does not place orders. It reads `decisions.csv`, waits until at least 20 future **closed** bars exist, retrieves those bars from MT5, and appends research labels to `outcomes.csv`.
+
+Run:
+
+```powershell
+python outcome_labeller.py
+```
+
+A recent decision may correctly produce:
+
+```text
+new_labels=0 | pending_for_20_bars=1
+```
+
+That simply means 20 future closed candles do not exist yet. Re-run the labeller later.
+
 ## Runtime files
 
 ```text
 data/signals.csv
 data/decisions.csv
+data/outcomes.csv
 logs/market_monitor.log
 ```
 
@@ -136,11 +166,29 @@ Records **every processed closed candle**, including candles where OpenAI was sk
 - whether OpenAI was called
 - OpenAI result when applicable
 
-This file becomes the main dataset for later filter and outcome research.
+This is the source journal for research.
 
 ### `signals.csv`
 
 Records only candles that passed the local filter and were sent to OpenAI.
+
+### `outcomes.csv`
+
+V4 records only decisions that have at least 20 future closed bars available. For each matured decision it stores:
+
+- entry close and ATR14
+- local filter direction and scores
+- OpenAI action/confidence/regime when available
+- future close after 5, 10, and 20 bars
+- raw market return after 5, 10, and 20 bars
+- direction-adjusted local-filter return
+- direction-adjusted OpenAI return
+- highest/lowest price during the next 20 bars
+- MFE/MAE for the long market direction
+- direction-adjusted MFE/MAE for the local filter
+- direction-adjusted MFE/MAE for OpenAI BUY/SELL signals
+
+`WAIT` and locally skipped decisions deliberately have blank direction-adjusted metrics where no BUY/SELL direction exists.
 
 ## Local filter V3
 
@@ -168,17 +216,46 @@ During V2 development, the MetaQuotes demo terminal exposed candle times roughly
 3. estimates the server-to-UTC offset from live tick time;
 4. stores a normalized UTC timestamp.
 
-This must be validated before adding London/New York session rules.
+On the current development terminal, V3 detected `+3.0h`. Continue observing this across trading sessions before adding London/New York session rules.
+
+V4 uses the original raw MT5 candle epoch as the history key so outcome matching is independent of display timezone.
+
+## Outcome definitions
+
+For a decision at entry close `P0`, the 5-bar outcome uses the close of the **fifth future closed bar**, not the current/forming bar. The same rule applies to 10 and 20 bars.
+
+Raw market return is long-oriented:
+
+```text
+(exit - entry) / entry * 100
+```
+
+Direction-adjusted return:
+
+- BUY: same as raw market return
+- SELL: sign is inverted
+- WAIT/NONE: blank
+
+MFE (maximum favorable excursion) is never below zero. MAE (maximum adverse excursion) is never above zero. Both are measured over the next 20 closed bars.
+
+V4 intentionally does **not** simulate SL/TP yet because SL/TP rules have not been validated. ATR-based SL/TP research will be added only as an explicit, configurable experiment rather than silently assuming arbitrary distances.
 
 ## Tests
 
-The deterministic filter has basic unit tests:
+Run all deterministic tests from the `ai_trader` directory:
 
 ```powershell
 python -m unittest discover -s tests -v
 ```
 
-If the test runner cannot import `strategy_filter`, run it from the `ai_trader` directory exactly as shown above.
+Current tests cover:
+
+- bullish filter candidate
+- excessive spread skip
+- low-volatility skip
+- BUY/SELL directional return sign
+- BUY/SELL MFE/MAE direction
+- correct 5th/10th/20th future-bar selection
 
 ## Development roadmap
 
@@ -214,18 +291,26 @@ Still pending in V3:
 - add session filter only after time validation
 - tune thresholds from data rather than intuition
 
-### V4 - Outcome labelling / research
+### V4 - Outcome labelling / research ✅ initial implementation
 
-For every historical decision measure:
+- mature decisions only after 20 future closed bars
+- future close after 5/10/20 bars
+- raw market returns
+- direction-adjusted local-filter returns
+- direction-adjusted OpenAI returns
+- 20-bar MFE/MAE
+- duplicate-label protection
+- unit tests for outcome maths
 
-- return after N bars
-- MFE / MAE
-- hypothetical SL/TP result
-- performance by local score
+Still pending in V4:
+
+- aggregate performance report by local score
 - performance by OpenAI action
 - performance by confidence bucket
 - performance by market regime
-- API call reduction from the local filter
+- API-call reduction report
+- optional explicit ATR-based SL/TP simulation
+- larger historical/replay dataset
 
 ### V5 - Risk engine
 
