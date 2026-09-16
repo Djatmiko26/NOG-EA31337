@@ -178,6 +178,8 @@ The deterministic filter has basic unit tests:
 python -m unittest discover -s tests -v
 ```
 
+If the test runner cannot import `strategy_filter`, run it from the `ai_trader` directory exactly as shown above.
+
 ## Development roadmap
 
 ### V1 - Connectivity ✅
