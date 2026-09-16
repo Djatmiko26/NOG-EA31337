@@ -1,28 +1,34 @@
 # NOG OpenAI Trader
 
-Experimental read-only market monitor that connects MetaTrader 5 to the OpenAI API.
+Experimental read-only market research system connecting MetaTrader 5 to the OpenAI API.
 
-## Current status
-
-Working pipeline:
+## Current pipeline
 
 ```text
 MetaTrader 5
     |
-    | XAUUSD closed M5 candles
+    | CLOSED XAUUSD M5 candle
     v
-Python
-    |
-    | EMA20 / EMA50 / RSI14 / ATR14
-    v
-OpenAI API
-    |
-    | Structured output
-    v
-BUY / SELL / WAIT
+Python indicators
+EMA20 / EMA50 / RSI14 / ATR14
     |
     v
-data/signals.csv + logs/market_monitor.log
+Deterministic local filter
+spread / ATR / trend / momentum / breakout proximity
+    |
+    +---- setup weak ----------> decisions.csv (OpenAI skipped)
+    |
+    +---- setup qualifies
+             |
+             v
+         OpenAI API
+             |
+             | structured output
+             v
+       BUY / SELL / WAIT
+             |
+             +--> signals.csv
+             +--> decisions.csv
 ```
 
 **No order execution code is present in this version.**
@@ -33,17 +39,17 @@ data/signals.csv + logs/market_monitor.log
 - Never commit an OpenAI API key.
 - Do not enable live trading while this branch is in the research/monitoring phase.
 - OpenAI output is analysis, not a direct order instruction.
-- Risk management and order permission will remain local deterministic rules.
-- The planned risk-per-trade baseline is 0.25%, but it is not active in this monitor.
+- Risk management and order permission remain local deterministic rules.
+- Planned baseline risk per trade is 0.25%, but no trade execution exists yet.
 
 ## Requirements
 
 - Windows
 - MetaTrader 5 terminal
-- Python 3.14+ (current development machine uses Python 3.14.6)
+- Python 3.14+
 - OpenAI API key
 
-Install dependencies:
+Install:
 
 ```powershell
 pip install -r requirements.txt
@@ -51,14 +57,14 @@ pip install -r requirements.txt
 
 ## Setup
 
-Create `.env` from the template:
+Create `.env`:
 
 ```powershell
 Copy-Item .env.example .env
 notepad .env
 ```
 
-Set your own API key:
+Minimum required value:
 
 ```text
 OPENAI_API_KEY=your_real_key_here
@@ -76,46 +82,101 @@ CANDLES_TO_LOAD=120
 CANDLES_TO_AI=30
 ```
 
+V3 local-filter defaults:
+
+```text
+FILTER_ENABLED=true
+FILTER_LOOKBACK=12
+FILTER_MIN_SCORE=4
+FILTER_MIN_ATR_RATIO=0.00035
+FILTER_MAX_SPREAD_ATR_RATIO=0.12
+FILTER_BREAKOUT_BUFFER_ATR=0.25
+FILTER_MIN_EMA_GAP_ATR=0.10
+FILTER_RSI_BULL=52
+FILTER_RSI_BEAR=48
+```
+
+These are **research defaults**, not proven profitable parameters. They must be evaluated with collected data before any demo execution work.
+
 ## Run
 
-Keep MetaTrader 5 open and logged into the demo account, then run:
+Keep MT5 open and logged into the demo account:
 
 ```powershell
 python market_monitor.py
 ```
 
-Stop safely with:
+Stop safely:
 
 ```text
 Ctrl+C
 ```
 
-The program creates runtime files locally:
+## Runtime files
 
 ```text
 data/signals.csv
+data/decisions.csv
 logs/market_monitor.log
 ```
 
-These runtime files are ignored by Git.
+All are ignored by Git.
 
-## What `signals.csv` records
+### `decisions.csv`
 
-Each processed closed candle stores:
+Records **every processed closed candle**, including candles where OpenAI was skipped. It contains:
 
-- candle timestamp
-- symbol and timeframe
-- close
-- EMA20
-- EMA50
-- RSI14
-- ATR14
+- raw MT5 candle epoch
+- broker/server wall-clock time
+- normalized UTC time
+- indicator values
 - spread
-- OpenAI action (`BUY`, `SELL`, `WAIT`)
-- confidence (classification confidence, **not** probability of profit)
-- market regime
-- reason
-- model name
+- local filter result
+- bullish/bearish setup scores
+- whether OpenAI was called
+- OpenAI result when applicable
+
+This file becomes the main dataset for later filter and outcome research.
+
+### `signals.csv`
+
+Records only candles that passed the local filter and were sent to OpenAI.
+
+## Local filter V3
+
+The filter is deliberately deterministic and inspectable. It checks:
+
+- ATR relative to price
+- spread relative to ATR
+- EMA20/EMA50 alignment
+- close relative to EMA20
+- RSI direction
+- last-bar momentum
+- EMA separation relative to ATR
+- proximity to the previous lookback high/low
+
+Bullish and bearish conditions each receive a score. By default the strongest direction needs at least `4` of `6` conditions. A tied, weak, low-volatility, or expensive-spread setup is skipped locally.
+
+The filter does **not** place orders and does **not** decide position size.
+
+## MT5 server time handling
+
+During V2 development, the MetaQuotes demo terminal exposed candle times roughly three hours ahead of real UTC. V3 therefore:
+
+1. keeps the original MT5 epoch as candle identity;
+2. records broker/server wall-clock time separately;
+3. estimates the server-to-UTC offset from live tick time;
+4. stores a normalized UTC timestamp.
+
+This must be validated before adding London/New York session rules.
+
+## Tests
+
+The deterministic filter has basic unit tests:
+
+```powershell
+python -m unittest discover -s tests -v
+```
 
 ## Development roadmap
 
@@ -123,50 +184,57 @@ Each processed closed candle stores:
 
 - MT5 -> Python
 - Python -> OpenAI
-- XAUUSD M5 candle retrieval
+- XAUUSD M5 closed-candle retrieval
 - structured `BUY / SELL / WAIT`
 
-### V2 - Continuous monitor ✅ initial implementation
+### V2 - Continuous monitor ✅
 
 - process only newly closed candles
-- call OpenAI once per new candle
+- one OpenAI call per processed candle
 - CSV signal journal
-- text runtime log
+- runtime logging
 - restart/resume protection
 
-### V3 - Local setup filter
+### V3 - Local setup filter ✅ initial implementation
 
-Before calling OpenAI, evaluate deterministic conditions such as:
-
-- spread
-- ATR
-- trend alignment
+- spread/ATR gate
+- volatility gate
+- trend/momentum scoring
 - breakout proximity
-- session
+- OpenAI skip path
+- every-candle decision journal
+- broker/server vs UTC timestamp separation
+- unit tests
 
-Only qualifying setups should consume an OpenAI API call.
+Still pending in V3:
+
+- validate detected broker clock offset over a full trading day
+- add session filter only after time validation
+- tune thresholds from data rather than intuition
 
 ### V4 - Outcome labelling / research
 
-Measure what happened after each historical signal:
+For every historical decision measure:
 
-- MFE / MAE
 - return after N bars
+- MFE / MAE
 - hypothetical SL/TP result
-- performance by action
+- performance by local score
+- performance by OpenAI action
 - performance by confidence bucket
 - performance by market regime
+- API call reduction from the local filter
 
 ### V5 - Risk engine
 
 Deterministic local controls:
 
-- risk per trade: 0.25%
+- 0.25% risk per trade
 - maximum daily loss
 - maximum open positions
 - spread ceiling
 - signal expiry
-- SL distance validation
+- SL validation
 - broker-aware lot sizing
 
 ### V6 - Demo execution
@@ -177,7 +245,7 @@ Only after research metrics justify it:
 - demo orders only
 - kill switch
 - idempotent order handling
-- full execution journal
+- execution journal
 
 ### V7 - Walk-forward validation
 
@@ -185,10 +253,8 @@ Validate on unseen periods before considering a small live account.
 
 ## Branch
 
-Development branch:
-
 ```text
 openai-trader-v1
 ```
 
-It was created from `small-account-v1` so the existing small-account work remains preserved.
+Created from `small-account-v1` so the existing small-account development remains preserved.
