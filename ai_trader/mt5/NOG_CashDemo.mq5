@@ -1,5 +1,5 @@
 #property strict
-#property version "1.05"
+#property version "1.06"
 #property description "XAUUSD DEMO USD only. Planned loss <=10, target 10; default PREVIEW."
 #include "NOG_CashMath.mqh"
 
@@ -206,6 +206,21 @@ bool CheckCash(const MqlTradeRequest &r,const double fee,double &loss,double &pr
    loss=-a+fee;profit=b-fee;
    return loss>0&&loss<=10+1e-8&&profit>=10-1e-8;
   }
+bool SavePreviewReceipt(const Signal &s,const MqlTick &tick,const MqlTradeRequest &r,const CashPlan &p)
+  {
+   string name=DIR+"\\preview_receipts_v1.journal";
+   int file=FileOpen(name,FILE_READ|FILE_WRITE|FILE_TXT|FILE_ANSI,0,CP_UTF8);
+   if(file==INVALID_HANDLE)return false;
+   string row="P1;"+I(g_login)+";"+I((long)Hash32(g_server))+";"+s.id+";"+I(s.bar)+";"+s.action+";"+
+      I((long)tick.time_msc)+";"+DoubleToString(r.volume,8)+";"+DoubleToString(r.price,8)+";"+
+      DoubleToString(r.sl,8)+";"+DoubleToString(r.tp,8)+";"+DoubleToString(p.loss,8)+";"+
+      DoubleToString(p.profit,8)+";"+DoubleToString(p.fee,8);
+   row+=";"+I((long)Hash32(row))+"\r\n";
+   FileSeek(file,0,SEEK_END);ResetLastError();
+   uint written=FileWriteString(file,row);FileFlush(file);FileClose(file);
+   return written==(uint)StringLen(row)&&GetLastError()==0;
+  }
+
 bool Plan(Signal &s,MqlTick &tick,MqlTradeRequest &r,CashPlan &p,string &why)
   {
    if(!SameDemo()||!FreshQuote(tick)){why="DEMO_USD_OR_QUOTE";return false;}
@@ -256,7 +271,11 @@ void Process(Signal &s)
    if(!Plan(s,tick,r,p,why)){Show("RISK_REJECT | "+why);return;}
    Print("NOG_CASH | PLAN | ",s.action," | lot=",r.volume," | SL=",r.sl," | TP=",r.tp,
          " | stressed_loss_usd=",p.loss," | stressed_profit_usd=",p.profit," | estimated_fee=",p.fee);
-   if(s.mode!="DEMO_SEND"||!InpEnableDemoOrders){Show("PREVIEW_PLAN_OK | NO_ORDER");return;}
+   if(s.mode!="DEMO_SEND"||!InpEnableDemoOrders)
+     {
+      if(s.mode=="PREVIEW"&&!SavePreviewReceipt(s,tick,r,p)){Show("PREVIEW_RECEIPT_WRITE_FAILED | NO_ORDER");return;}
+      Show("PREVIEW_PLAN_OK | NO_ORDER");return;
+     }
    if(!InpAcknowledgeHighRisk||!MQLInfoInteger(MQL_TRADE_ALLOWED)||!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED)||
       !AccountInfoInteger(ACCOUNT_TRADE_ALLOWED)||!AccountInfoInteger(ACCOUNT_TRADE_EXPERT))
      {Show("DEMO_NOT_ARMED_OR_PERMISSION_OFF");return;}
