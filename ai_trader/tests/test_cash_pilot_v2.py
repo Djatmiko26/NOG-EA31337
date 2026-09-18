@@ -72,6 +72,9 @@ class SourceSafetyTests(unittest.TestCase):
         text=Path(v2.__file__).read_text(encoding="utf-8")
         self.assertIn("initial = ledger.count()",text)
         self.assertIn("while ledger.count() == initial:",text)
+        self.assertIn("V2_DELIVERY_WINDOW",text)
+        self.assertIn("time.sleep(6)",text)
+        self.assertIn("ThreadingHTTPServer",text)
         self.assertIn("break",text)
 
 
