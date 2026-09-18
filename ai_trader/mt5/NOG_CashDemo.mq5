@@ -217,8 +217,9 @@ bool SavePreviewReceipt(const Signal &s,const MqlTick &tick,const MqlTradeReques
       DoubleToString(p.profit,8)+";"+DoubleToString(p.fee,8);
    row+=";"+I((long)Hash32(row))+"\r\n";
    FileSeek(file,0,SEEK_END);ResetLastError();
-   uint written=FileWriteString(file,row);FileFlush(file);FileClose(file);
-   return written==(uint)StringLen(row)&&GetLastError()==0;
+   uint written=FileWriteString(file,row);FileFlush(file);
+   int err=GetLastError();FileClose(file);
+   return written==(uint)StringLen(row)&&err==0;
   }
 
 bool Plan(Signal &s,MqlTick &tick,MqlTradeRequest &r,CashPlan &p,string &why)
