@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 from dataclasses import replace
 import hashlib
-from http.server import HTTPServer
+from http.server import ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
@@ -182,7 +182,9 @@ def run_one(feed, core):
         if not key:
             raise ValueError("OPENAI_API_KEY_MISSING")
 
-        server = HTTPServer((HOST, PORT), base.handler_for(state, token, identity))
+        ThreadingHTTPServer.allow_reuse_address = True
+        ThreadingHTTPServer.daemon_threads = True
+        server = ThreadingHTTPServer((HOST, PORT), base.handler_for(state, token, identity))
         worker = threading.Thread(target=server.serve_forever, daemon=True)
         client = OpenAI(
             api_key=key,
@@ -236,6 +238,9 @@ def run_one(feed, core):
                             f"http={result.get('http_status','-')} | "
                             f"code={result.get('error_code','-')}"
                         )
+                    if result.get("delivery") == "READY_FOR_EA":
+                        log("V2_DELIVERY_WINDOW | 6s | no second API call")
+                        time.sleep(6)
                     break
             except (core.GuardError, ValueError):
                 gate.reset()
