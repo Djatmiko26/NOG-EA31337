@@ -32,7 +32,7 @@ VERSION = "cash-pilot-v2"
 
 
 def log(message):
-    print(time.strftime("[%%Y-%%m-%%d %%H:%%M:%%S UTC] ", time.gmtime()) + message, flush=True)
+    print(time.strftime("[%Y-%m-%d %H:%M:%S UTC] ", time.gmtime()) + message, flush=True)
 
 
 def encode(value):
