@@ -131,11 +131,30 @@ class LedgerTests(unittest.TestCase):
         self.path=Path(self.tmp.name)/'ledger.sqlite3';self.ledger=app.Ledger(self.path,{'test':1})
         self.addCleanup(self.ledger.close)
 
-    def test_cap_shared_between_preview_and_orders(self):
-        for i,mode in enumerate(('PREVIEW','DEMO_SEND','PREVIEW')):
-            self.assertIsNotNone(self.ledger.reserve(100+i,mode,{}))
-            self.ledger.finish(100+i,{'status':'SUCCESS'})
-        self.assertIsNone(self.ledger.reserve(200,'DEMO_SEND',{}));self.assertEqual(self.ledger.count(),3)
+    def test_caps_are_separate_preview_three_demo_send_one(self):
+        for bar in (100,101,102):
+            self.assertIsNotNone(self.ledger.reserve(bar,'PREVIEW',{}))
+            self.ledger.finish(bar,{'status':'SUCCESS'})
+        self.assertIsNone(self.ledger.reserve(103,'PREVIEW',{}))
+        self.assertIsNotNone(self.ledger.reserve(200,'DEMO_SEND',{}))
+        self.ledger.finish(200,{'status':'SUCCESS'})
+        self.assertIsNone(self.ledger.reserve(201,'DEMO_SEND',{}))
+        self.assertEqual(self.ledger.count('PREVIEW'),3)
+        self.assertEqual(self.ledger.count('DEMO_SEND'),1)
+        self.assertEqual(self.ledger.count(),4)
+
+    def test_legacy_ledger_without_policy_migrates_without_reset(self):
+        self.ledger.reserve(100,'PREVIEW',{})
+        self.ledger.finish(100,{'status':'SUCCESS'})
+        self.ledger.close()
+        db=sqlite3.connect(self.path)
+        with db:db.execute('DROP TABLE policy')
+        db.close()
+        self.ledger=app.Ledger(self.path,{'test':1})
+        self.assertEqual(self.ledger.count('PREVIEW'),1)
+        self.assertEqual(self.ledger.count('DEMO_SEND'),0)
+        self.assertEqual(self.ledger.budget('PREVIEW'),(1,3))
+        self.assertEqual(self.ledger.budget('DEMO_SEND'),(0,1))
 
     def test_reservation_survives_other_connection(self):
         self.ledger.reserve(100,'PREVIEW',{})
