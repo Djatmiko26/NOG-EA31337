@@ -1,5 +1,5 @@
 #property strict
-#property version "1.04"
+#property version "1.05"
 #property description "XAUUSD DEMO USD only. Planned loss <=10, target 10; default PREVIEW."
 #include "NOG_CashMath.mqh"
 
@@ -73,6 +73,10 @@ bool LoadState()
    // No FILE_SHARE flags: exclusive journal in this terminal only.
    g_file=FileOpen(name,FILE_READ|FILE_WRITE|FILE_TXT|FILE_ANSI,0,CP_UTF8);
    if(g_file==INVALID_HANDLE)return StateFail("STATE_LOCKED_OR_UNREADABLE");
+   // On input changes MT5 can re-run OnInit in the same program instance. Replay
+   // the append-only journal from a clean RAM accumulator; never reset the file.
+   g_seq=0;g_day=0;g_anchor=0;g_initial_equity=0;g_initial_balance=0;
+   g_daily=0;g_total=0;g_last_bar=0;g_halt=0;
    g_spec=I(g_login)+":"+I((long)Hash32(g_server+"|CASH10_10_V2|ONE_ENTRY|"+
                 DoubleToString(InpRoundTripCommissionPerLot,8)+"|"+DoubleToString(InpRoundTripFixedFee,8)));
    if(FileSize(g_file)==0)
@@ -82,10 +86,12 @@ bool LoadState()
       if(end<=0)return StateFail("HISTORY_CLOCK_UNAVAILABLE");
       ResetLastError();if(!HistorySelect(0,end))return StateFail("HISTORY_SELECT_FAILED_"+I(GetLastError()));
       for(int h=0;h<HistoryOrdersTotal();h++)
-         if(HistoryOrderGetInteger(HistoryOrderGetTicket(h),ORDER_MAGIC)==(long)MAGIC)return false;
+         if(HistoryOrderGetInteger(HistoryOrderGetTicket(h),ORDER_MAGIC)==(long)MAGIC)return StateFail("BROKER_HISTORY_HAS_ROBOT_ORDER_REVIEW_REQUIRED");
       g_day=(long)TimeGMT()/86400;g_anchor=(long)TimeTradeServer();
       g_initial_equity=AccountInfoDouble(ACCOUNT_EQUITY);g_initial_balance=AccountInfoDouble(ACCOUNT_BALANCE);
-      return CashPositive(g_initial_equity)&&CashPositive(g_initial_balance)&&Save();
+      if(!CashPositive(g_initial_equity)||!CashPositive(g_initial_balance))return StateFail("INVALID_INITIAL_BALANCE_EQUITY");
+      if(!Save())return StateFail("INITIAL_STATE_SAVE_FAILED_"+I(GetLastError()));
+      return true;
      }
    string previous_spec="";
    FileSeek(g_file,0,SEEK_SET); // restart-safe: read existing journal from the beginning
@@ -96,21 +102,21 @@ bool LoadState()
       if(StringLen(row)==0)
         {
          if(FileIsEnding(g_file))break;
-         return false;
+         return StateFail("EMPTY_ROW_INSIDE_JOURNAL");
         }
-      if(StringSplit(row,';',f)!=12||f[0]!="C1")return false;
-      if(g_total>0&&previous_spec!=""&&f[1]!=previous_spec)return false;
+      if(StringSplit(row,';',f)!=12||f[0]!="C1")return StateFail("JOURNAL_ROW_FORMAT");
+      if(g_total>0&&previous_spec!=""&&f[1]!=previous_spec)return StateFail("SETTINGS_CHANGED_AFTER_SUBMISSION");
       previous_spec=f[1];string base=f[0];for(int k=1;k<11;k++)base+=";"+f[k];
-      if(f[11]!=I((long)Hash32(base)))return false;
-      for(int k=2;k<12;k++)if(!DecimalText(f[k])||((k<5||k>6)&&!IntegerText(f[k])))return false;
+      if(f[11]!=I((long)Hash32(base)))return StateFail("JOURNAL_CHECKSUM_MISMATCH");
+      for(int k=2;k<12;k++)if(!DecimalText(f[k])||((k<5||k>6)&&!IntegerText(f[k])))return StateFail("JOURNAL_NUMERIC_FORMAT");
       int seq=(int)StringToInteger(f[2]),daily=(int)StringToInteger(f[7]);
       int total=(int)StringToInteger(f[8]),halt=(int)StringToInteger(f[10]);
       long day=StringToInteger(f[3]),bar=StringToInteger(f[9]);
       if(seq!=g_seq+1||day<g_day||bar<g_last_bar||total<g_total||total>1||daily<0||daily>1||
-         daily>total||halt<0||halt>1||(day==g_day&&daily<g_daily))return false;
+         daily>total||halt<0||halt>1||(day==g_day&&daily<g_daily))return StateFail("JOURNAL_SEQUENCE_OR_MONOTONICITY");
       g_seq=seq;g_day=day;g_anchor=StringToInteger(f[4]);g_initial_equity=StringToDouble(f[5]);
       g_initial_balance=StringToDouble(f[6]);g_daily=daily;g_total=total;g_last_bar=bar;g_halt=halt;
-      if(!CashPositive(g_initial_equity)||!CashPositive(g_initial_balance)||g_seq>20000)return false;
+      if(!CashPositive(g_initial_equity)||!CashPositive(g_initial_balance)||g_seq>20000)return StateFail("JOURNAL_BALANCE_OR_SEQUENCE_RANGE");
      }
    if(g_seq==0)return StateFail("NO_VALID_STATE_ROWS");
    if(previous_spec!=g_spec)
