@@ -236,7 +236,7 @@ def process_event(ledger,state,client,core,feed,account,before,payload,decision,
     if checked is not None:
         _,end_m,end_w=checked
         issued=int(end_w);expires=min(issued+30,int(event_w+40))
-        if expiry_ok := (expires>issued):
+        if expires>issued:
             body=base.packet("PREVIEW",sid,final,issued,expires,before.closed,account.login,
                              payload["candles"][-1]["atr14"],before.bid,before.ask)
             result.update(delivery="READY_FOR_EA",issued_at=issued,expires_at=expires)
@@ -263,8 +263,6 @@ def run_one(feed,core):
             log(f"V3_EVENT_CAP_REACHED | {ledger.event_count()}/{EVENT_CAP}");return
 
         key=os.getenv("OPENAI_API_KEY","").strip()
-        if not key and ledger.api_count()<API_CAP:
-            raise ValueError("OPENAI_API_KEY_MISSING")
 
         ThreadingHTTPServer.allow_reuse_address=True
         ThreadingHTTPServer.daemon_threads=True
@@ -292,7 +290,7 @@ def run_one(feed,core):
                     payload=feed.payload(obs)
                     decision=ensemble.evaluate(payload)
                     _log_decision(decision)
-                    if decision.action!="WAIT" and client is None:
+                    if decision.action!="WAIT" and ledger.api_count()<API_CAP and client is None:
                         raise ValueError("OPENAI_API_KEY_MISSING")
                     result=process_event(
                         ledger,state,client,core,feed,account,obs,payload,decision,m,w
@@ -307,8 +305,13 @@ def run_one(feed,core):
                         log(f"V3_DELIVERY_WINDOW | {DELIVERY_WINDOW_SECONDS}s | no second event")
                         time.sleep(DELIVERY_WINDOW_SECONDS)
                     break
-            except (core.GuardError,ValueError):
+            except core.GuardError:
                 gate.reset();state.clear();message="V3_FEED_GUARD_RESYNC"
+            except ValueError as exc:
+                if str(exc).startswith("ENSEMBLE_"):
+                    gate.reset();state.clear();message="V3_ENSEMBLE_INPUT_RESYNC"
+                else:
+                    raise
             if message!=previous:log(message);previous=message
             if time.monotonic()-heartbeat>=30:
                 log(f"V3_HEARTBEAT | {message} | events={ledger.event_count()} | api={ledger.api_count()}")
