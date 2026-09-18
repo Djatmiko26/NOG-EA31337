@@ -1,5 +1,5 @@
 #property strict
-#property version "1.01"
+#property version "1.02"
 #property description "XAUUSD DEMO USD only. Planned loss <=10, target 10; default PREVIEW."
 #include "NOG_CashMath.mqh"
 
@@ -86,6 +86,12 @@ bool LoadState()
    while(!FileIsEnding(g_file))
      {
       string row=FileReadString(g_file),f[];
+      // Text files may end with CRLF. Do not treat a final empty read as corruption.
+      if(StringLen(row)==0)
+        {
+         if(FileIsEnding(g_file))break;
+         return false;
+        }
       if(StringSplit(row,';',f)!=12||f[0]!="C1")return false;
       if(g_total>0&&previous_spec!=""&&f[1]!=previous_spec)return false;
       previous_spec=f[1];string base=f[0];for(int k=1;k<11;k++)base+=";"+f[k];
@@ -105,6 +111,12 @@ bool LoadState()
      {
       if(g_total>0){Show("SETTINGS_FROZEN_AFTER_SUBMISSION");return false;}
       if(PositionsTotal()>0||OrdersTotal()>0){Show("PRE_PILOT_REANCHOR_REQUIRES_FLAT_ACCOUNT");return false;}
+      // Defense-in-depth: a missing journal submission must not hide a broker-side
+      // order previously sent with this magic number.
+      if(!HistorySelect(0,TimeTradeServer()))return false;
+      for(int h=0;h<HistoryOrdersTotal();h++)
+         if(HistoryOrderGetInteger(HistoryOrderGetTicket(h),ORDER_MAGIC)==(long)MAGIC)
+           {Show("BROKER_HISTORY_HAS_ROBOT_ORDER_REVIEW_REQUIRED");return false;}
       // Preserve the append-only journal but start the actual robot pilot from the
       // current clean account state. This excludes manual setup/calibration P&L
       // that happened before the first robot submission.
@@ -114,7 +126,7 @@ bool LoadState()
       g_initial_balance=AccountInfoDouble(ACCOUNT_BALANCE);
       g_daily=0;
       if(!CashPositive(g_initial_equity)||!CashPositive(g_initial_balance)||!Save())return false;
-      Show("PRE_PILOT_REANCHORED | prior manual/setup P&L excluded; journal preserved");
+      Show("PRE_SUBMISSION_SETTINGS_MIGRATED | reanchored; journal preserved");
      }
    return true;
   }
