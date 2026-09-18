@@ -1,5 +1,5 @@
 #property strict
-#property version "1.02"
+#property version "1.03"
 #property description "XAUUSD DEMO USD only. Planned loss <=10, target 10; default PREVIEW."
 #include "NOG_CashMath.mqh"
 
@@ -13,7 +13,7 @@ const string URL="http://127.0.0.1:8765/signal",DIR="NOG_CashDemo";
 const int DEVIATION_POINTS=20;
 long g_login=0,g_last_bar=0,g_day=0,g_anchor=0,g_started=0,g_tick=0;
 string g_server="",g_token="",g_status="",g_spec="";
-int g_file=INVALID_HANDLE,g_daily=0,g_total=0,g_halt=0,g_seq=0;
+int g_file=INVALID_HANDLE,g_daily=0,g_total=0,g_halt=0,g_seq=0;\nstring g_state_error="";
 double g_initial_equity=0,g_initial_balance=0;
 ulong g_tick_seen=0,g_last_mono=0;
 long g_last_wall=0;
@@ -68,13 +68,13 @@ bool LoadState()
    bool existed=FileIsExist(name);
    // No FILE_SHARE flags: exclusive journal in this terminal only.
    g_file=FileOpen(name,FILE_READ|FILE_WRITE|FILE_TXT|FILE_ANSI,0,CP_UTF8);
-   if(g_file==INVALID_HANDLE){Show("STATE_LOCKED_OR_UNREADABLE | one receiver only");return false;}
+   if(g_file==INVALID_HANDLE)return StateFail("STATE_LOCKED_OR_UNREADABLE");
    g_spec=I(g_login)+":"+I((long)Hash32(g_server+"|CASH10_10_V2|ONE_ENTRY|"+
                 DoubleToString(InpRoundTripCommissionPerLot,8)+"|"+DoubleToString(InpRoundTripFixedFee,8)));
    if(FileSize(g_file)==0)
      {
-      if(existed){Show("EMPTY_STATE_REVIEW_REQUIRED");return false;}
-      if(!HistorySelect(0,TimeTradeServer()))return false;
+      if(existed)return StateFail("EMPTY_STATE_REVIEW_REQUIRED");
+      datetime end=(datetime)TimeTradeServer();if(end<=0)end=TimeCurrent();\n      if(end<=0)return StateFail("HISTORY_CLOCK_UNAVAILABLE");\n      ResetLastError();if(!HistorySelect(0,end))return StateFail("HISTORY_SELECT_FAILED_"+I(GetLastError()));
       for(int h=0;h<HistoryOrdersTotal();h++)
          if(HistoryOrderGetInteger(HistoryOrderGetTicket(h),ORDER_MAGIC)==(long)MAGIC)return false;
       g_day=(long)TimeGMT()/86400;g_anchor=(long)TimeTradeServer();
@@ -106,17 +106,17 @@ bool LoadState()
       g_initial_balance=StringToDouble(f[6]);g_daily=daily;g_total=total;g_last_bar=bar;g_halt=halt;
       if(!CashPositive(g_initial_equity)||!CashPositive(g_initial_balance)||g_seq>20000)return false;
      }
-   if(g_seq==0)return false;
+   if(g_seq==0)return StateFail("NO_VALID_STATE_ROWS");
    if(previous_spec!=g_spec)
      {
-      if(g_total>0){Show("SETTINGS_FROZEN_AFTER_SUBMISSION");return false;}
-      if(PositionsTotal()>0||OrdersTotal()>0){Show("PRE_PILOT_REANCHOR_REQUIRES_FLAT_ACCOUNT");return false;}
+      if(g_total>0)return StateFail("SETTINGS_FROZEN_AFTER_SUBMISSION");
+      if(PositionsTotal()>0||OrdersTotal()>0)return StateFail("PRE_PILOT_REANCHOR_REQUIRES_FLAT_ACCOUNT");
       // Defense-in-depth: a missing journal submission must not hide a broker-side
       // order previously sent with this magic number.
       if(!HistorySelect(0,TimeTradeServer()))return false;
       for(int h=0;h<HistoryOrdersTotal();h++)
          if(HistoryOrderGetInteger(HistoryOrderGetTicket(h),ORDER_MAGIC)==(long)MAGIC)
-           {Show("BROKER_HISTORY_HAS_ROBOT_ORDER_REVIEW_REQUIRED");return false;}
+           {return StateFail("BROKER_HISTORY_HAS_ROBOT_ORDER_REVIEW_REQUIRED");}
       // Preserve the append-only journal but start the actual robot pilot from the
       // current clean account state. This excludes manual setup/calibration P&L
       // that happened before the first robot submission.
@@ -125,7 +125,7 @@ bool LoadState()
       g_initial_equity=AccountInfoDouble(ACCOUNT_EQUITY);
       g_initial_balance=AccountInfoDouble(ACCOUNT_BALANCE);
       g_daily=0;
-      if(!CashPositive(g_initial_equity)||!CashPositive(g_initial_balance)||!Save())return false;
+      if(!CashPositive(g_initial_equity)||!CashPositive(g_initial_balance))return StateFail("INVALID_REANCHOR_BALANCE_EQUITY");\n      if(!Save())return StateFail("REANCHOR_SAVE_FAILED_"+I(GetLastError()));
       Show("PRE_SUBMISSION_SETTINGS_MIGRATED | reanchored; journal preserved");
      }
    return true;
@@ -291,7 +291,7 @@ int OnInit()
    int key=FileOpen(DIR+"\\bridge.token",FILE_READ|FILE_TXT|FILE_ANSI,0,CP_UTF8);
    if(key==INVALID_HANDLE){Print("NOG CASH: run cash_demo.py --install first.");return INIT_FAILED;}
    g_token=FileReadString(key);FileClose(key);if(!HexText(g_token,64))return INIT_FAILED;
-   if(!SameDemo()||!LoadState()){Print("NOG CASH STATE STOP: preserve journal.");return INIT_FAILED;}
+   if(!SameDemo()){Print("NOG CASH INIT STOP: account/symbol/source guard failed.");return INIT_FAILED;}\n   if(!LoadState()){Print("NOG CASH STATE STOP: ",g_state_error," | preserve journal.");return INIT_FAILED;}
    MqlTick tick={};if(!SymbolInfoTick(_Symbol,tick))return INIT_FAILED;g_tick=tick.time_msc;g_tick_seen=GetTickCount64();
    if(!EventSetTimer(2))return INIT_FAILED;
    Print("NOG_CASH | CASH_SELF_TEST_PASS | default preview; planned cash is NOT a guarantee");
