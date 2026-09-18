@@ -69,6 +69,20 @@ slippage di luar asumsi, eksekusi berbeda, biaya salah, swap/pembiayaan dan biay
 API belum dikendalikan penuh. Tidak ada software stop yang menjamin harga fill.
 Tidak ada backtest profit baru dalam perubahan ini.
 
+## Re-anchor sebelum entry robot pertama
+
+Versi EA 1.01 mempertahankan journal lama, tetapi bila **belum pernah ada pengajuan
+robot** (`total=0`) dan konfigurasi pilot berpindah ke V2, EA membuat satu anchor
+baru dari balance/equity saat ini **hanya jika akun sedang flat** (tidak ada posisi
+atau pending order). Tujuannya memisahkan P&L manual/kalibrasi yang terjadi sebelum
+pilot robot dari pengukuran pilot sebenarnya. Journal tetap append-only; tidak
+dihapus atau ditimpa. Jika sudah ada pengajuan robot, settings tetap dibekukan dan
+re-anchor ditolak.
+
+Daily guard USD 10 tidak dilonggarkan: setelah re-anchor, entry baru masih memerlukan
+existing drawdown < USD 10 dan existing drawdown + planned stressed risk <= USD 10.
+Dengan pilot satu-entry, ini menjaga total planned exposure harian tetap konservatif.
+
 ## Batas harian dan pilot — tidak lagi 1% versi lama
 
 Batas entry baru berdasarkan penurunan balance/equity USD 10 dari anchor harian
