@@ -197,6 +197,13 @@ def main():
             r=receipts.get(sid)
             if r is None or r["bar"]!=bar or r["action"]!=action:
                 skipped+=1;continue
+            expected_fee=args.commission_per_lot*r["volume"]+args.fixed_fee
+            if abs(r["fee"]-expected_fee)>1e-8:
+                print(
+                    f"RR_SIGNAL | bar={bar} | action={action} | "
+                    f"FEE_MISMATCH receipt={r['fee']:.8f} expected={expected_fee:.8f}"
+                )
+                skipped+=1;continue
             matched.append((sid,r,confidence,regime))
 
         if not matched:
