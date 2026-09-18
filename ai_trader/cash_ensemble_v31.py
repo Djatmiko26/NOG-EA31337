@@ -1,4 +1,4 @@
-"""Cash Ensemble V3.1.1: weighted regime-aware logics -> independent AI confirmation -> PREVIEW.
+"""Cash Ensemble V3.1: weighted regime-aware logics -> independent AI confirmation -> PREVIEW.
 
 Research-only safety:
 - separate ledger: data/cash_ensemble_v31.sqlite3
