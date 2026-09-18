@@ -2,7 +2,7 @@
 
 --check / --install / --status: NO OpenAI requests, NO broker orders.
 --run: paid PREVIEW; --run --demo-orders: explicit DEMO transport.
-Both paid modes share a NEW three-attempt ledger. The EA defaults to no orders.
+Paid budgets are mode-separated: PREVIEW=3 attempts, DEMO_SEND=1 attempt.\nThe append-only ledger is preserved; the EA defaults to no orders.
 """
 from __future__ import annotations
 import argparse
@@ -22,7 +22,7 @@ import cash_risk as risk
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'data' / 'cash_demo.sqlite3'
-HOST, PORT, CAP = '127.0.0.1', 8765, 3
+HOST, PORT, LEGACY_CAP = '127.0.0.1', 8765, 3\nMODE_CAPS = {'PREVIEW':3,'DEMO_SEND':1}
 EA_FILES = ('NOG_CashDemo.mq5', 'NOG_CashMath.mqh')
 ERROR_CODES = {'insufficient_quota','credit_balance_exhausted','rate_limit_exceeded',
                'organization_usage_limit_exceeded','organization_spend_limit_exceeded',
@@ -38,7 +38,7 @@ def encode(value):
 
 
 class Ledger:
-    """One cumulative API budget across preview/send. A reserved bar is never retried."""
+    """Persistent attempts with separate immutable PREVIEW/DEMO_SEND caps. A reserved bar is never retried."""
     def __init__(self,path: Path,spec: dict):
         path.parent.mkdir(parents=True,exist_ok=True)
         self.db=sqlite3.connect(path,timeout=5)
@@ -68,7 +68,7 @@ class Ledger:
         text=encode(payload)
         self.db.execute('BEGIN IMMEDIATE')
         try:
-            if self.blocked() or self.count()>=CAP or self.db.execute('SELECT 1 FROM attempts WHERE bar=?',(bar,)).fetchone():
+            if self.blocked() or self.count(mode)>=MODE_CAPS[mode] or self.db.execute('SELECT 1 FROM attempts WHERE bar=?',(bar,)).fetchone():
                 return None
             sid=secrets.token_hex(16)
             self.db.execute("INSERT INTO attempts VALUES(?,?,?,'STARTED',?,NULL)",(bar,sid,mode,text))
@@ -252,12 +252,12 @@ def run(feed,core,mode):
         ledger=Ledger(DB,{'symbol':'XAUUSD','model':feed.config.model,'source_id':obs.source_id,
                           'implementation':implementation(),'instructions':core.INSTRUCTIONS,'schema':core.SCHEMA})
         if ledger.blocked():raise ValueError('UNRESOLVED_ATTEMPT_USE_STATUS_PRESERVE_LEDGER')
-        if ledger.count()>=CAP:log('API_CAP_REACHED | no new request');return
+        used,cap=ledger.budget(mode)\n        if used>=cap:log(f'API_CAP_REACHED | {mode}={used}/{cap} | no new request');return
         key=os.getenv('OPENAI_API_KEY','').strip()
         if not key:raise ValueError('OPENAI_API_KEY_MISSING')
         client=OpenAI(api_key=key,base_url='https://api.openai.com/v1',max_retries=0,timeout=25.)
         worker.start();started=True
-        log(f'CASH_BRIDGE_READY | {mode} | XAUUSD M5 | NEW_API_BUDGET={ledger.count()}/{CAP}')
+        log(f'CASH_BRIDGE_READY | {mode} | XAUUSD M5 | MODE_BUDGET={ledger.count(mode)}/{MODE_CAPS[mode]}')
         log('Cash targets $10/$10; actual outcome not guaranteed. Ctrl+C stops signals, NOT open positions.')
         gate=core.TransitionGate();previous='';heartbeat=time.monotonic()
         while True:
@@ -267,12 +267,12 @@ def run(feed,core,mode):
                 state.maintain(obs.closed,gate.tick_is_advancing(m),m,w)
                 if not state.receiver_ready(m):
                     gate.reset();state.clear();message='WAIT_CASH_EA | no API before matching receiver polls'
-                elif ledger.count()>=CAP:message='API_CAP_REACHED | no more requests; Ctrl+C to stop'
+                elif ledger.count(mode)>=MODE_CAPS[mode]:message=f'API_CAP_REACHED | {mode}={ledger.count(mode)}/{MODE_CAPS[mode]}; Ctrl+C to stop'
                 elif event is not None:
                     payload=feed.payload(obs)
                     result=analyse(ledger,state,client,core,feed,mode,account.login,obs,payload,m,w)
                     log(f"OPENAI_RESULT | {result['status']} | action={result.get('signal',{}).get('action','-')} | "
-                        f"delivery={result['delivery']} | attempts={ledger.count()}/{CAP}")
+                        f"delivery={result['delivery']} | {mode.lower()}={ledger.count(mode)}/{MODE_CAPS[mode]}")
                     if result['status'] not in {'SUCCESS','SKIPPED'}:
                         log(f"STOP_AFTER_ERROR | http={result.get('http_status','-')} | code={result.get('error_code','-')}");break
                     gate.reset()
@@ -281,7 +281,7 @@ def run(feed,core,mode):
                 gate.reset();state.clear();message='FEED_GUARD_RESYNC | no signal published'
             if message!=previous:log(message);previous=message
             if time.monotonic()-heartbeat>=30:
-                log(f'HEARTBEAT | {message} | attempts={ledger.count()}/{CAP}');heartbeat=time.monotonic()
+                log(f'HEARTBEAT | {message} | {mode.lower()}={ledger.count(mode)}/{MODE_CAPS[mode]}');heartbeat=time.monotonic()
             time.sleep(core.POLL_SECONDS)
     finally:
         state.clear()
@@ -299,7 +299,7 @@ def status():
         for bar,mode,st,text in rows:
             r=json.loads(text) if text else {}
             log(f"bar={bar} | {mode} | {st} | delivery={r.get('delivery','UNKNOWN')} | action={r.get('signal',{}).get('action','-')} | code={r.get('error_code','-')}")
-        log(f'ATTEMPTS={len(rows)}/{CAP} | API_CALLS=0 | ledger only')
+        preview=sum(1 for _,mode,_,_ in rows if mode=='PREVIEW')\n        demo=sum(1 for _,mode,_,_ in rows if mode=='DEMO_SEND')\n        log(f'BUDGET | PREVIEW={preview}/{MODE_CAPS["PREVIEW"]} | DEMO_SEND={demo}/{MODE_CAPS["DEMO_SEND"]} | TOTAL={len(rows)} | API_CALLS=0 | ledger only')
     finally:db.close()
 
 
