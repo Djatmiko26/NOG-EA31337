@@ -74,7 +74,8 @@ class SourceSafetyTests(unittest.TestCase):
         text=Path(v3.__file__).read_text(encoding="utf-8")
         self.assertNotIn("OrderSend(",text)
         self.assertNotIn("order_send(",text)
-        self.assertNotIn("DEMO_SEND",text)
+        self.assertNotIn("--demo-orders",text)
+        self.assertNotIn("TRADE_ACTION_DEAL",text)
         self.assertIn('"PREVIEW"',text)
         self.assertIn("AI_MIN_CONFIDENCE",text)
 
