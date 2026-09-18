@@ -1,5 +1,5 @@
 #property strict
-#property version "1.00"
+#property version "1.01"
 #property description "XAUUSD DEMO USD only. Planned loss <=10, target 10; default PREVIEW."
 #include "NOG_CashMath.mqh"
 
@@ -69,7 +69,7 @@ bool LoadState()
    // No FILE_SHARE flags: exclusive journal in this terminal only.
    g_file=FileOpen(name,FILE_READ|FILE_WRITE|FILE_TXT|FILE_ANSI,0,CP_UTF8);
    if(g_file==INVALID_HANDLE){Show("STATE_LOCKED_OR_UNREADABLE | one receiver only");return false;}
-   g_spec=I(g_login)+":"+I((long)Hash32(g_server+"|CASH10_10_V1|ONE_ENTRY|"+
+   g_spec=I(g_login)+":"+I((long)Hash32(g_server+"|CASH10_10_V2|ONE_ENTRY|"+
                 DoubleToString(InpRoundTripCommissionPerLot,8)+"|"+DoubleToString(InpRoundTripFixedFee,8)));
    if(FileSize(g_file)==0)
      {
@@ -102,7 +102,20 @@ bool LoadState()
      }
    if(g_seq==0)return false;
    if(previous_spec!=g_spec)
-     {if(g_total>0){Show("SETTINGS_FROZEN_AFTER_SUBMISSION");return false;}return Save();}
+     {
+      if(g_total>0){Show("SETTINGS_FROZEN_AFTER_SUBMISSION");return false;}
+      if(PositionsTotal()>0||OrdersTotal()>0){Show("PRE_PILOT_REANCHOR_REQUIRES_FLAT_ACCOUNT");return false;}
+      // Preserve the append-only journal but start the actual robot pilot from the
+      // current clean account state. This excludes manual setup/calibration P&L
+      // that happened before the first robot submission.
+      g_day=(long)TimeGMT()/86400;
+      g_anchor=(long)TimeTradeServer();
+      g_initial_equity=AccountInfoDouble(ACCOUNT_EQUITY);
+      g_initial_balance=AccountInfoDouble(ACCOUNT_BALANCE);
+      g_daily=0;
+      if(!CashPositive(g_initial_equity)||!CashPositive(g_initial_balance)||!Save())return false;
+      Show("PRE_PILOT_REANCHORED | prior manual/setup P&L excluded; journal preserved");
+     }
    return true;
   }
 
