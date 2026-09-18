@@ -194,7 +194,7 @@ def run(config: Config, feed: MT5Feed, client_factory=None) -> None:
                                 max_retries=0, timeout=25.)
         worker.start()
         started = True
-        log(f"LIVE AI BRIDGE READY | {config.symbol} M5 | model={config.model} | attempts={ledger.count()}/3")
+        log(f"LIVE AI BRIDGE READY | {config.symbol} M5 | model={config.model} | attempts={ledger.count()}/{ATTEMPT_CAP}")
         log("PAID_API_ON_NEW_CLOSED_BAR | NO_LOCAL_DIRECTION_HINT | NO_ORDER_EXECUTION")
         log(f"http://{HOST}:{PORT}/signal | attach NOG_LiveAI_DRYRUN | Ctrl+C to stop")
         gate, last_message = TransitionGate(), ""
@@ -211,7 +211,7 @@ def run(config: Config, feed: MT5Feed, client_factory=None) -> None:
                     state.clear()
                     message = "WAIT_EA_RECEIVER | no API call before compatible receiver is polling"
                 elif ledger.count() >= ATTEMPT_CAP:
-                    message = "CALL_LIMIT_REACHED | 3/3 | no more API requests; Ctrl+C to stop"
+                    message = f"CALL_LIMIT_REACHED | {ATTEMPT_CAP}/{ATTEMPT_CAP} | no more API requests; Ctrl+C to stop"
                 elif event is not None:
                     state.clear()
                     payload = feed.payload(obs)
@@ -225,7 +225,7 @@ def run(config: Config, feed: MT5Feed, client_factory=None) -> None:
                         signal = result.get("signal", {})
                         log(f"OPENAI_RESULT | status={result['status']} | action={signal.get('action', '-')} | "
                             f"confidence_score={signal.get('confidence', '-')} | delivery={result['delivery']} | "
-                            f"attempts={ledger.count()}/3")
+                            f"attempts={ledger.count()}/{ATTEMPT_CAP}")
                         if signal:
                             # No model output becomes a command; reason is display/log data only.
                             reason = " ".join(signal["reason"].split())[:500]
@@ -246,7 +246,7 @@ def run(config: Config, feed: MT5Feed, client_factory=None) -> None:
                 log(message)
                 last_message = message
             if time.monotonic() - last_heartbeat >= 30:
-                log(f"HEARTBEAT | {message} | attempts={ledger.count()}/3 | NO_ORDER_EXECUTION")
+                log(f"HEARTBEAT | {message} | attempts={ledger.count()}/{ATTEMPT_CAP} | NO_ORDER_EXECUTION")
                 last_heartbeat = time.monotonic()
             time.sleep(POLL_SECONDS)
     finally:
