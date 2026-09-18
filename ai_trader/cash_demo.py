@@ -2,7 +2,8 @@
 
 --check / --install / --status: NO OpenAI requests, NO broker orders.
 --run: paid PREVIEW; --run --demo-orders: explicit DEMO transport.
-Paid budgets are mode-separated: PREVIEW=3 attempts, DEMO_SEND=1 attempt.\nThe append-only ledger is preserved; the EA defaults to no orders.
+Paid budgets are mode-separated: PREVIEW=3 attempts, DEMO_SEND=1 attempt.
+The append-only ledger is preserved; the EA defaults to no orders.
 """
 from __future__ import annotations
 import argparse
