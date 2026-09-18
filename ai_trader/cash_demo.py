@@ -55,14 +55,32 @@ class Ledger:
             text=encode({**spec,'cash_version':risk.VERSION,'api_cap':LEGACY_CAP,'loss_usd':10,'profit_usd':10})
             policy=encode({'PREVIEW':MODE_CAPS['PREVIEW'],'DEMO_SEND':MODE_CAPS['DEMO_SEND']})
             with self.db:
-                self.db.execute('INSERT OR IGNORE INTO meta VALUES(1,?)',(text,))
-                self.db.execute('INSERT OR IGNORE INTO policy VALUES(1,?)',(policy,))
-            if self.db.execute('SELECT spec FROM meta WHERE id=1').fetchone()[0]!=text:
-                raise ValueError('FROZEN_SETTINGS_CHANGED_PRESERVE_LEDGER')
-            if self.db.execute('SELECT spec FROM policy WHERE id=1').fetchone()[0]!=policy:
-                raise ValueError('FROZEN_BUDGET_POLICY_CHANGED_PRESERVE_LEDGER')
+                old=self.db.execute('SELECT spec FROM meta WHERE id=1').fetchone()
+                if old is None:self.db.execute('INSERT INTO meta VALUES(1,?)',(text,))
+                elif old[0]!=text:
+                    if not self._allow_budget_migration(old[0],text):
+                        raise ValueError('FROZEN_SETTINGS_CHANGED_PRESERVE_LEDGER')
+                    self.db.execute('UPDATE meta SET spec=? WHERE id=1',(text,))
+                old_policy=self.db.execute('SELECT spec FROM policy WHERE id=1').fetchone()
+                if old_policy is None:self.db.execute('INSERT INTO policy VALUES(1,?)',(policy,))
+                elif old_policy[0]!=policy:
+                    raise ValueError('FROZEN_BUDGET_POLICY_CHANGED_PRESERVE_LEDGER')
         except BaseException:
             self.db.close();raise
+
+    def _allow_budget_migration(self,old_text,new_text):
+        try:
+            old,new=json.loads(old_text),json.loads(new_text)
+            oi,ni=old.get('implementation'),new.get('implementation')
+            if not isinstance(oi,dict) or not isinstance(ni,dict) or set(oi)!=set(ni) or 'cash_demo.py' not in oi:
+                return False
+            if any(oi[k]!=ni[k] for k in oi if k!='cash_demo.py'):return False
+            old['implementation']=ni
+            if old!=new:return False
+            rows=list(self.db.execute('SELECT mode,status FROM attempts'))
+            return len(rows)<=LEGACY_CAP and all(mode=='PREVIEW' and status=='SUCCESS' for mode,status in rows)
+        except (TypeError,ValueError,json.JSONDecodeError):
+            return False
 
     def close(self): self.db.close()
     def count(self,mode=None):
