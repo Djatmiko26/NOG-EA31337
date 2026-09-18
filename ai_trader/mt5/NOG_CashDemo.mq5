@@ -82,6 +82,7 @@ bool LoadState()
       return CashPositive(g_initial_equity)&&CashPositive(g_initial_balance)&&Save();
      }
    string previous_spec="";
+   FileSeek(g_file,0,SEEK_SET); // restart-safe: read existing journal from the beginning
    while(!FileIsEnding(g_file))
      {
       string row=FileReadString(g_file),f[];
