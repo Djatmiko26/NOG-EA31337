@@ -135,13 +135,16 @@ def status():
         directional = waits = 0
         for bar, st, result_text in rows:
             result = json.loads(result_text) if result_text else {}
-            action = result.get("signal", {}).get("action", "-")
+            signal = result.get("signal", {})
+            action = signal.get("action", "-")
             if action in {"BUY", "SELL"}:
                 directional += 1
             elif action == "WAIT":
                 waits += 1
             log(
                 f"V2 | bar={bar} | {st} | action={action} | "
+                f"confidence={signal.get('confidence','-')} | "
+                f"regime={signal.get('market_regime','-')} | "
                 f"delivery={result.get('delivery','UNKNOWN')}"
             )
         log(
