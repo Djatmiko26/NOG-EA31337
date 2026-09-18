@@ -141,12 +141,13 @@ EA `InpEnableDemoOrders=true`, `InpAcknowledgeHighRisk=true`, serta izin
 Algo Trading MT5/EA/akun, kondisi demo USD dan seluruh risk guards.
 Tidak ada mode akun riil. Persetujuan risiko tidak menghapus risk guards.
 
-**Kedua mode memakai satu ledger baru dengan total maksimum tiga permintaan API
-TAMBAHAN gabungan**, bukan tiga per mode/restart/hari. Batas tidak memakai ulang
-sisa quota pilot lama dan bukan limit dolar billing. Semua attempt direservasi
-sebelum HTTP; kegagalan/STARTED memblokir run. SDK max_retries=0, timeout=25 detik,
-output bound diwarisi 2048 token. Jangan delete ledger atau mengganti model untuk
-mengulang. Setelah error periksa --status; source/model/code dibekukan.
+**Kedua mode memakai satu ledger persisten dengan budget terpisah: PREVIEW maksimum
+3 attempt dan DEMO_SEND maksimum 1 attempt.** Ledger lama dimigrasikan tanpa
+menghapus attempt yang sudah ada. Batas bukan limit dolar billing. Semua attempt
+direservasi sebelum HTTP; kegagalan/STARTED memblokir run. SDK max_retries=0,
+timeout=25 detik, output bound diwarisi 2048 token. Jangan delete ledger atau
+mengganti model untuk mengulang. Setelah error periksa --status; source/model/code
+dan kebijakan budget dibekukan.
 
 ```powershell
 & C:\venv\Scripts\python.exe .\cash_demo.py --status
