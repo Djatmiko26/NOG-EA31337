@@ -22,7 +22,8 @@ import cash_risk as risk
 
 ROOT = Path(__file__).resolve().parent
 DB = ROOT / 'data' / 'cash_demo.sqlite3'
-HOST, PORT, LEGACY_CAP = '127.0.0.1', 8765, 3\nMODE_CAPS = {'PREVIEW':3,'DEMO_SEND':1}
+HOST, PORT, LEGACY_CAP = '127.0.0.1', 8765, 3
+MODE_CAPS = {'PREVIEW':3,'DEMO_SEND':1}
 EA_FILES = ('NOG_CashDemo.mq5', 'NOG_CashMath.mqh')
 ERROR_CODES = {'insufficient_quota','credit_balance_exhausted','rate_limit_exceeded',
                'organization_usage_limit_exceeded','organization_spend_limit_exceeded',
@@ -46,24 +47,35 @@ class Ledger:
             self.db.execute('PRAGMA synchronous=FULL')
             self.db.executescript('''
                 CREATE TABLE IF NOT EXISTS meta(id INTEGER PRIMARY KEY CHECK(id=1),spec TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS policy(id INTEGER PRIMARY KEY CHECK(id=1),spec TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS attempts(bar INTEGER PRIMARY KEY,sid TEXT UNIQUE,
                     mode TEXT NOT NULL,status TEXT NOT NULL,payload TEXT NOT NULL,result TEXT);
             ''')
-            text=encode({**spec,'cash_version':risk.VERSION,'api_cap':CAP,'loss_usd':10,'profit_usd':10})
+            text=encode({**spec,'cash_version':risk.VERSION,'api_cap':LEGACY_CAP,'loss_usd':10,'profit_usd':10})
+            policy=encode({'PREVIEW':MODE_CAPS['PREVIEW'],'DEMO_SEND':MODE_CAPS['DEMO_SEND']})
             with self.db:
                 self.db.execute('INSERT OR IGNORE INTO meta VALUES(1,?)',(text,))
+                self.db.execute('INSERT OR IGNORE INTO policy VALUES(1,?)',(policy,))
             if self.db.execute('SELECT spec FROM meta WHERE id=1').fetchone()[0]!=text:
                 raise ValueError('FROZEN_SETTINGS_CHANGED_PRESERVE_LEDGER')
+            if self.db.execute('SELECT spec FROM policy WHERE id=1').fetchone()[0]!=policy:
+                raise ValueError('FROZEN_BUDGET_POLICY_CHANGED_PRESERVE_LEDGER')
         except BaseException:
             self.db.close();raise
 
     def close(self): self.db.close()
-    def count(self): return self.db.execute('SELECT COUNT(*) FROM attempts').fetchone()[0]
+    def count(self,mode=None):
+        if mode is None:return self.db.execute('SELECT COUNT(*) FROM attempts').fetchone()[0]
+        if mode not in MODE_CAPS:raise ValueError('INVALID_MODE')
+        return self.db.execute('SELECT COUNT(*) FROM attempts WHERE mode=?',(mode,)).fetchone()[0]
+    def budget(self,mode):
+        if mode not in MODE_CAPS:raise ValueError('INVALID_MODE')
+        return self.count(mode),MODE_CAPS[mode]
     def blocked(self):
         return self.db.execute("SELECT 1 FROM attempts WHERE status!='SUCCESS' LIMIT 1").fetchone() is not None
 
     def reserve(self,bar:int,mode:str,payload:dict):
-        if type(bar) is not int or bar<=0 or mode not in {'PREVIEW','DEMO_SEND'}:
+        if type(bar) is not int or bar<=0 or mode not in MODE_CAPS:
             raise ValueError('INVALID_RESERVATION')
         text=encode(payload)
         self.db.execute('BEGIN IMMEDIATE')
@@ -82,7 +94,6 @@ class Ledger:
             cur=self.db.execute("UPDATE attempts SET status=?,result=? WHERE bar=? AND status='STARTED'",
                                 (result['status'],encode(result),bar))
             if cur.rowcount!=1: raise ValueError('UNRESERVED_OR_FINISHED_ATTEMPT')
-
 
 def safe_error(exc):
     code=getattr(exc,'code',None);body=getattr(exc,'body',None)
@@ -252,7 +263,8 @@ def run(feed,core,mode):
         ledger=Ledger(DB,{'symbol':'XAUUSD','model':feed.config.model,'source_id':obs.source_id,
                           'implementation':implementation(),'instructions':core.INSTRUCTIONS,'schema':core.SCHEMA})
         if ledger.blocked():raise ValueError('UNRESOLVED_ATTEMPT_USE_STATUS_PRESERVE_LEDGER')
-        used,cap=ledger.budget(mode)\n        if used>=cap:log(f'API_CAP_REACHED | {mode}={used}/{cap} | no new request');return
+        used,cap=ledger.budget(mode)
+        if used>=cap:log(f'API_CAP_REACHED | {mode}={used}/{cap} | no new request');return
         key=os.getenv('OPENAI_API_KEY','').strip()
         if not key:raise ValueError('OPENAI_API_KEY_MISSING')
         client=OpenAI(api_key=key,base_url='https://api.openai.com/v1',max_retries=0,timeout=25.)
@@ -299,9 +311,10 @@ def status():
         for bar,mode,st,text in rows:
             r=json.loads(text) if text else {}
             log(f"bar={bar} | {mode} | {st} | delivery={r.get('delivery','UNKNOWN')} | action={r.get('signal',{}).get('action','-')} | code={r.get('error_code','-')}")
-        preview=sum(1 for _,mode,_,_ in rows if mode=='PREVIEW')\n        demo=sum(1 for _,mode,_,_ in rows if mode=='DEMO_SEND')\n        log(f'BUDGET | PREVIEW={preview}/{MODE_CAPS["PREVIEW"]} | DEMO_SEND={demo}/{MODE_CAPS["DEMO_SEND"]} | TOTAL={len(rows)} | API_CALLS=0 | ledger only')
+        preview=sum(1 for _,mode,_,_ in rows if mode=='PREVIEW')
+        demo=sum(1 for _,mode,_,_ in rows if mode=='DEMO_SEND')
+        log(f'BUDGET | PREVIEW={preview}/{MODE_CAPS["PREVIEW"]} | DEMO_SEND={demo}/{MODE_CAPS["DEMO_SEND"]} | TOTAL={len(rows)} | API_CALLS=0 | ledger only')
     finally:db.close()
-
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__);mode=parser.add_mutually_exclusive_group()
