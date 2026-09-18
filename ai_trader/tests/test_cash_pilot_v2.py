@@ -15,8 +15,14 @@ class LedgerTests(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.path=Path(self.tmp.name)/"v2.sqlite3"
-        self.ledger=v2.Ledger(self.path,{"test":1})
-        self.addCleanup(self.ledger.close)
+        self.ledger=None
+        self.open_ledger({"test":1})
+
+    def open_ledger(self,spec):
+        ledger=v2.Ledger(self.path,spec)
+        self.addCleanup(ledger.close)
+        self.ledger=ledger
+        return ledger
 
     def test_preview_only_and_duplicate_bar(self):
         sid=self.ledger.reserve(100,"PREVIEW",{"x":1})
@@ -40,11 +46,11 @@ class LedgerTests(unittest.TestCase):
 
     def test_frozen_spec(self):
         self.ledger.close()
-        self.ledger=v2.Ledger(self.path,{"test":1})
-        self.ledger.close()
+        reopened=self.open_ledger({"test":1})
+        reopened.close()
         with self.assertRaisesRegex(ValueError,"V2_FROZEN_SETTINGS_CHANGED"):
             v2.Ledger(self.path,{"test":2})
-        self.ledger=v2.Ledger(self.path,{"test":1})
+        self.open_ledger({"test":1})
 
     def test_status_is_read_only(self):
         self.ledger.reserve(100,"PREVIEW",{})
@@ -56,7 +62,7 @@ class LedgerTests(unittest.TestCase):
             v2.status()
         self.assertEqual(before,self.path.read_bytes())
         self.assertIn("DIRECTIONAL=1",out.getvalue())
-        self.ledger=v2.Ledger(self.path,{"test":1})
+        self.open_ledger({"test":1})
 
 
 class SourceSafetyTests(unittest.TestCase):
