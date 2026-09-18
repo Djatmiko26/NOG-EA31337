@@ -156,6 +156,26 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(self.ledger.budget('PREVIEW'),(1,3))
         self.assertEqual(self.ledger.budget('DEMO_SEND'),(0,1))
 
+    def test_budget_migration_allows_only_cash_demo_hash_change_for_successful_previews(self):
+        path=Path(self.tmp.name)/'migrate.sqlite3'
+        old=app.Ledger(path,{'test':1,'implementation':{'cash_demo.py':'old','cash_risk.py':'same'}})
+        old.reserve(300,'PREVIEW',{});old.finish(300,{'status':'SUCCESS'});old.close()
+        db=sqlite3.connect(path)
+        with db:db.execute('DROP TABLE policy')
+        db.close()
+        new=app.Ledger(path,{'test':1,'implementation':{'cash_demo.py':'new','cash_risk.py':'same'}})
+        try:
+            self.assertEqual(new.count('PREVIEW'),1)
+            self.assertEqual(new.budget('DEMO_SEND'),(0,1))
+        finally:new.close()
+
+    def test_budget_migration_rejects_other_implementation_change(self):
+        path=Path(self.tmp.name)/'reject.sqlite3'
+        old=app.Ledger(path,{'test':1,'implementation':{'cash_demo.py':'old','cash_risk.py':'same'}})
+        old.reserve(301,'PREVIEW',{});old.finish(301,{'status':'SUCCESS'});old.close()
+        with self.assertRaises(ValueError):
+            app.Ledger(path,{'test':1,'implementation':{'cash_demo.py':'new','cash_risk.py':'changed'}})
+
     def test_reservation_survives_other_connection(self):
         self.ledger.reserve(100,'PREVIEW',{})
         other=app.Ledger(self.path,{'test':1})
