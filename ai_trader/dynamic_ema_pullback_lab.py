@@ -215,7 +215,7 @@ def fmt_bars(value):
     return "NA" if not math.isfinite(value) else f"{value:.1f}"
 
 
-def load_mt5_history(count:int):
+def load_mt5_history(count:int,start_pos:int=1):
     import MetaTrader5 as mt5
     if not mt5.initialize(MT5_PATH):
         raise RuntimeError("MT5_INITIALIZE_FAILED")
@@ -226,7 +226,9 @@ def load_mt5_history(count:int):
                 or account.currency!="USD" or info.currency_profit!="USD"):
             raise RuntimeError("XAUUSD_USD_DEMO_REQUIRED")
         if not mt5.symbol_select(SYMBOL,True):raise RuntimeError("XAUUSD_SELECT_FAILED")
-        rates=mt5.copy_rates_from_pos(SYMBOL,mt5.TIMEFRAME_M5,1,count)
+        if type(start_pos) is not int or start_pos<1:
+            raise RuntimeError("INVALID_START_POS")
+        rates=mt5.copy_rates_from_pos(SYMBOL,mt5.TIMEFRAME_M5,start_pos,count)
         if rates is None or len(rates)<min(count,500):
             raise RuntimeError("M5_HISTORY_UNAVAILABLE")
         raw=sorted(rates,key=lambda r:int(r["time"]))
@@ -240,6 +242,8 @@ def load_mt5_history(count:int):
 def main()->int:
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--bars",type=int,default=20000)
+    p.add_argument("--start-pos",type=int,default=1,
+                   help="MT5 closed-bar offset: 1=latest closed window; 20001=older non-overlapping 20k window")
     p.add_argument("--pip-price",type=float,default=0.1)
     p.add_argument("--min-body-pips",type=float,default=60.0)
     p.add_argument("--max-wick-ratio",type=float,default=0.20)
@@ -251,6 +255,8 @@ def main()->int:
 
     if args.bars<500 or args.bars>300000:
         raise SystemExit("--bars must be between 500 and 300000")
+    if args.start_pos<1:
+        raise SystemExit("--start-pos must be >= 1")
     if args.max_hold_bars<0:raise SystemExit("--max-hold-bars must be >= 0")
 
     cfg=dyn.Config(
@@ -262,7 +268,7 @@ def main()->int:
     )
 
     try:
-        bars,point=load_mt5_history(args.bars)
+        bars,point=load_mt5_history(args.bars,args.start_pos)
         signals=generate_signals(bars,point,cfg)
     except (ValueError,RuntimeError) as exc:
         print(f"DYN_LAB_STOP | {exc} | NO_API | NO_ORDER")
@@ -271,8 +277,9 @@ def main()->int:
     buys=sum(s.action=="BUY" for s in signals)
     sells=sum(s.action=="SELL" for s in signals)
     print(
-        f"DYN_LAB_READY | bars={len(bars)} | signals={len(signals)} | "
-        f"BUY={buys} | SELL={sells} | point={point:.8f} | "
+        f"DYN_LAB_READY | bars={len(bars)} | start_pos={args.start_pos} | "
+        f"from_raw={bars[0].time} | to_raw={bars[-1].time} | "
+        f"signals={len(signals)} | BUY={buys} | SELL={sells} | point={point:.8f} | "
         f"pip_price={cfg.pip_price:.4f} | max_positions={cfg.max_active_positions} | "
         f"max_hold_bars={args.max_hold_bars} | NO_API | NO_ORDER"
     )
