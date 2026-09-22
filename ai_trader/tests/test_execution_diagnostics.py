@@ -63,7 +63,7 @@ class ExecutionDiagnosticsTests(unittest.TestCase):
         self.body = make_body()
         for name in ("execution_baseline.py", "strategy_filter.py"):
             text = '# Synthetic source identity fixture; never imported.\n'
-            (self.root / name).write_text(text, encoding="utf-8")
+            (self.root / name).write_bytes(text.encode("utf-8"))
             self.body["implementation"][name] = hashlib.sha256(text.encode()).hexdigest()
         self.rows = make_rows(self.body)
         self.save()
@@ -125,6 +125,7 @@ class ExecutionDiagnosticsTests(unittest.TestCase):
     def test_crlf_source_identity_normalized(self):
         path = self.root / "strategy_filter.py"
         path.write_bytes(path.read_bytes().replace(b'\n', b'\r\n'))
+        self.assertNotIn(b'\r\r\n', path.read_bytes())
         self.load()
 
     def test_changed_rules_rejected(self):

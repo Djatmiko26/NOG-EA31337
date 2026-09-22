@@ -6,6 +6,7 @@ import dataclasses
 import io
 import json
 import math
+import sqlite3
 from pathlib import Path
 import tempfile
 import threading
@@ -147,10 +148,10 @@ class LedgerTests(unittest.TestCase):
         self.ledger.reserve(100,'PREVIEW',{})
         self.ledger.finish(100,{'status':'SUCCESS'})
         self.ledger.close()
-        db=sqlite3.connect(self.path)
-        with db:db.execute('DROP TABLE policy')
-        db.close()
+        with contextlib.closing(sqlite3.connect(self.path)) as db:
+            with db:db.execute('DROP TABLE policy')
         self.ledger=app.Ledger(self.path,{'test':1})
+        self.addCleanup(self.ledger.close)
         self.assertEqual(self.ledger.count('PREVIEW'),1)
         self.assertEqual(self.ledger.count('DEMO_SEND'),0)
         self.assertEqual(self.ledger.budget('PREVIEW'),(1,3))
@@ -160,9 +161,8 @@ class LedgerTests(unittest.TestCase):
         path=Path(self.tmp.name)/'migrate.sqlite3'
         old=app.Ledger(path,{'test':1,'implementation':{'cash_demo.py':'old','cash_risk.py':'same'}})
         old.reserve(300,'PREVIEW',{});old.finish(300,{'status':'SUCCESS'});old.close()
-        db=sqlite3.connect(path)
-        with db:db.execute('DROP TABLE policy')
-        db.close()
+        with contextlib.closing(sqlite3.connect(path)) as db:
+            with db:db.execute('DROP TABLE policy')
         new=app.Ledger(path,{'test':1,'implementation':{'cash_demo.py':'new','cash_risk.py':'same'}})
         try:
             self.assertEqual(new.count('PREVIEW'),1)

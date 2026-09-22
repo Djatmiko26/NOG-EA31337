@@ -1,5 +1,7 @@
 """Synthetic data, mocked OpenAI/MT5 and local loopback only. No paid requests."""
 import ast
+import contextlib
+import io
 import copy
 import http.client
 import json
@@ -392,19 +394,53 @@ class AdapterHTTPTests(unittest.TestCase):
             server.shutdown();server.server_close();thread.join(2)
 
     def test_busy_port_makes_no_api_or_mt5_connection(self):
-        server=HTTPServer(('127.0.0.1',0),app.handler_for(core.BridgeState('XAUUSD')))
-        try:
-            feed,client=Mock(),Mock()
-            with patch.object(app,'PORT',server.server_port):
-                with self.assertRaises(core.GuardError):app.run(app.Config(),feed,client)
+        # Inject bind failure: SO_REUSEADDR differs between Windows and Linux.
+        # Workstation port ownership must not determine whether this test passes.
+        with tempfile.TemporaryDirectory() as td:
+            dbpath=Path(td)/'never-created.sqlite3'
+            feed,client=Mock(source_id=SOURCE),Mock()
+            with patch.object(app,'DB_FILE',dbpath), \
+                 patch.object(app,'HTTPServer',side_effect=OSError('address in use')) as server, \
+                 patch.object(app,'AttemptLedger',side_effect=AssertionError('ledger accessed')) as ledger, \
+                 patch.object(sqlite3,'connect',side_effect=AssertionError('SQLite accessed')) as connect:
+                with self.assertRaisesRegex(core.GuardError,'PORT_8765_BUSY'):
+                    app.run(app.Config(),feed,client)
+            server.assert_called_once()
+            ledger.assert_not_called();connect.assert_not_called()
             feed.connect.assert_not_called();client.assert_not_called()
-        finally:server.server_close()
+            self.assertFalse(dbpath.exists())
 
     def test_help_without_sitepackages_or_database(self):
-        result=subprocess.run([sys.executable,'-S',str(ROOT/'live_ai_bridge.py')],capture_output=True,text=True,timeout=5)
-        self.assertEqual(result.returncode,0,result.stderr)
-        self.assertIn('--run',result.stdout)
-        self.assertFalse((ROOT/'data'/'live_ai_bridge.sqlite3').exists())
+        # __file__-based defaults resolve inside the fixture even in a -S child.
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            for name in ('live_ai_bridge.py','live_ai_core.py'):
+                (root/name).write_bytes((ROOT/name).read_bytes())
+            dbpath=root/'data'/'live_ai_bridge.sqlite3'
+            for existing in (False,True):
+                if existing:
+                    dbpath.parent.mkdir()
+                    dbpath.write_bytes(b'untouched existing ledger sentinel')
+                for args in ([],['--help']):
+                    with self.subTest(existing=existing,args=args):
+                        result=subprocess.run([sys.executable,'-B','-S',str(root/'live_ai_bridge.py'),*args],
+                                              cwd=root,capture_output=True,text=True,timeout=5)
+                        self.assertEqual(result.returncode,0,result.stderr)
+                        self.assertIn('--run',result.stdout)
+                        if existing:self.assertEqual(dbpath.read_bytes(),b'untouched existing ledger sentinel')
+                        else:self.assertFalse(dbpath.exists())
+
+    def test_status_uses_temporary_ledger_read_only(self):
+        with tempfile.TemporaryDirectory() as td:
+            dbpath=Path(td)/'status.sqlite3'
+            with contextlib.closing(core.AttemptLedger(dbpath,{'test':1})):
+                pass
+            before=dbpath.read_bytes()
+            with patch.object(app,'DB_FILE',dbpath), contextlib.redirect_stdout(io.StringIO()):
+                app.status()
+            self.assertEqual(dbpath.read_bytes(),before)
+            # Windows rejects renaming an open SQLite file; never hide leaks.
+            dbpath.rename(dbpath.with_name('closed.sqlite3'))
 
     def test_run_loop_is_bounded_and_does_not_replay_on_restart(self):
         with tempfile.TemporaryDirectory() as td:
@@ -439,8 +475,11 @@ class AdapterHTTPTests(unittest.TestCase):
                 factory.reset_mock()
                 app.run(app.Config(model='test-model'),feed,factory)
                 factory.assert_not_called()  # capped journal cannot be reset by rerun
-            with sqlite3.connect(dbpath) as db:
-                self.assertEqual(db.execute('SELECT COUNT(*) FROM attempts').fetchone()[0],3)
+            with contextlib.closing(sqlite3.connect(dbpath)) as db:
+                with contextlib.closing(db.execute('SELECT COUNT(*) FROM attempts')) as cursor:
+                    self.assertEqual(cursor.fetchone()[0],3)
+            with self.assertRaises(sqlite3.ProgrammingError):db.execute('SELECT 1')
+            dbpath.rename(dbpath.with_name('closed.sqlite3'))
 
     def test_check_mode_reads_mt5_but_never_constructs_api_client(self):
         m=self.fake_mt5();sdk=Mock()
