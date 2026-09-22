@@ -1,0 +1,1430 @@
+{
+  "artifacts": [
+    {
+      "artifact": "cash_demo.sqlite3",
+      "bytes": 57344,
+      "classification": "Legacy/pilot research ledger; not a holdout",
+      "file_sha256": "7e24a9785c21c67ed90151805ece3352f6b24e88c435d8dbdbb5eb2010a419a0",
+      "generated_by": "cash_demo.py (see provenance exceptions)",
+      "id": "A01",
+      "interval_overlaps": [
+        "A09",
+        "A18"
+      ],
+      "range_raw": [
+        1789722300,
+        1789731600
+      ],
+      "rows": 4,
+      "settings_hash": "1770031dc3869320308ea86396bba4807319cbe9d9d88c6c0fc68d7908267b58",
+      "stored_source_hashes": {
+        "cash_demo.py": "3341f4c63c5058a38beff2f5942fa47a6c95adf06d6ceb13f1c53aca93e4f6f0",
+        "cash_risk.py": "5615df6657ce18647bb48c071f5e9b425fa93c907e9d2a5d02c37d1a68a92cc0",
+        "live_ai_bridge.py": "280d97397cb7b87b07adbcbb48bcea3203ae58f40486881a3da460cc98e097f9",
+        "live_ai_core.py": "d205a687ec6c26bb23c1881ea144c1a8b6e275c2b605d03b8ca45644eb315a88"
+      }
+    },
+    {
+      "artifact": "cash_ensemble_v3.sqlite3",
+      "bytes": 32768,
+      "classification": "Legacy/pilot research ledger; not a holdout",
+      "file_sha256": "f5a92e863641470de5ac054ff8ea07378cf98363ab6a27f40648620ef743d26c",
+      "generated_by": "cash_ensemble_v3.py (see provenance exceptions)",
+      "id": "A02",
+      "interval_overlaps": [
+        "A09",
+        "A18"
+      ],
+      "range_raw": [
+        1789742400,
+        1789742400
+      ],
+      "rows": 1,
+      "settings_hash": "53dbf9458bce763b99ef3e3e08056ff4c31aaf2a474237e7bb35849d4f8eb78c",
+      "stored_source_hashes": {
+        "cash_demo.py": "615c926feced05ab51bc0e0a17943702fa647425e04f9da7bffb3e74cb8965ca",
+        "cash_ensemble_v3.py": "34c86c975f1956e99ee4e88fac4f2c985095eaed2fcae2a1eaa60a24a54a6246",
+        "cash_risk.py": "3ba44fe3a555aa377d884c0cf13122fdf51d9799cac5d44bb74211d04e7c8786",
+        "ensemble_logic.py": "9c533edd22722bbb0243d51738052cdbc024064151eb5a3c572cce0da5727390",
+        "live_ai_bridge.py": "6130121f948eca30bf007b4f516556dee0739e33db8c25f5a0024b701b7ab912",
+        "live_ai_core.py": "5a611548313115c391a8a41849c249f472ec914789e9eaf6255f1072d04c2396"
+      }
+    },
+    {
+      "artifact": "cash_ensemble_v31.sqlite3",
+      "bytes": 16384,
+      "classification": "Legacy/pilot research ledger; not a holdout",
+      "file_sha256": "dbd1b398497b137f31ad6b95999dc0edc728439ff9287c0ce117cdfe3d9b1338",
+      "generated_by": "cash_ensemble_v31.py (see provenance exceptions)",
+      "id": "A03",
+      "interval_overlaps": [],
+      "range_raw": null,
+      "rows": 0,
+      "settings_hash": "f9c40fa5eaa3bf535501eda1cc9326e76b878224ee5a22573d64203a3b42abc6",
+      "stored_source_hashes": {
+        "cash_demo.py": "615c926feced05ab51bc0e0a17943702fa647425e04f9da7bffb3e74cb8965ca",
+        "cash_ensemble_v31.py": "12cfab67d0c73badbc15fc29d402cf34d7443811c326c3d1fb9e02638c5c3ae3",
+        "cash_risk.py": "3ba44fe3a555aa377d884c0cf13122fdf51d9799cac5d44bb74211d04e7c8786",
+        "ensemble_weighted_v31.py": "5d62ba53a2bb98e3bbb1a2748a8ea91f6222a8af8a17cf80d41daf3fd7348bf7",
+        "live_ai_bridge.py": "6130121f948eca30bf007b4f516556dee0739e33db8c25f5a0024b701b7ab912",
+        "live_ai_core.py": "5a611548313115c391a8a41849c249f472ec914789e9eaf6255f1072d04c2396"
+      }
+    },
+    {
+      "artifact": "cash_pilot_v2.sqlite3",
+      "bytes": 53248,
+      "classification": "Legacy/pilot research ledger; not a holdout",
+      "file_sha256": "ea9f7c4e338aa6b1c5b7d213008a0cfea8a3b91b14bf74fd96391408de1c71da",
+      "generated_by": "cash_pilot_v2.py (see provenance exceptions)",
+      "id": "A04",
+      "interval_overlaps": [
+        "A09",
+        "A18"
+      ],
+      "range_raw": [
+        1789733700,
+        1789741200
+      ],
+      "rows": 4,
+      "settings_hash": "86273293858661c6d0f3b9307ea7903b1d7edd87bdb4a9dd14da1ccc0bbdda96",
+      "stored_source_hashes": {
+        "cash_demo.py": "615c926feced05ab51bc0e0a17943702fa647425e04f9da7bffb3e74cb8965ca",
+        "cash_pilot_v2.py": "f51bca5263010adc53d94262fbe71e0a684b3103cab130ae07e45ab1b08f0cbd",
+        "cash_risk.py": "3ba44fe3a555aa377d884c0cf13122fdf51d9799cac5d44bb74211d04e7c8786",
+        "live_ai_bridge.py": "6130121f948eca30bf007b4f516556dee0739e33db8c25f5a0024b701b7ab912",
+        "live_ai_core.py": "5a611548313115c391a8a41849c249f472ec914789e9eaf6255f1072d04c2396"
+      }
+    },
+    {
+      "artifact": "cash_replay_oos_older_v3_decisions.csv",
+      "bytes": 6849843,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "91ec8511f22418fe760f27e2706496e52d44baf9ad80646c7b69ece6c5c49a0b",
+      "generated_by": "cash_replay generator source unavailable; not inferred from filename",
+      "id": "A05",
+      "interval_overlaps": [
+        "A06",
+        "A19"
+      ],
+      "range_raw": [
+        1744639200,
+        1767010200
+      ],
+      "rows": 49881,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "cash_replay_oos_older_v3_outcomes.csv",
+      "bytes": 1803249,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "a1edec3dc386d48f2cbf945cc278e3e23642752a3f955ee4d4a8a5452dc747f1",
+      "generated_by": "cash_replay generator source unavailable; not inferred from filename",
+      "id": "A06",
+      "interval_overlaps": [
+        "A05",
+        "A19"
+      ],
+      "range_raw": [
+        1744644000,
+        1766997900
+      ],
+      "rows": 5632,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "cash_replay_oos_predev_decisions.csv",
+      "bytes": 6027083,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "7e48cb09cf7b905932799c372a1d5d383592a6930cb83f6873f3de19bbf91677",
+      "generated_by": "cash_replay generator source unavailable; not inferred from filename",
+      "id": "A07",
+      "interval_overlaps": [
+        "A08",
+        "A09",
+        "A18"
+      ],
+      "range_raw": [
+        1767046200,
+        1787233200
+      ],
+      "rows": 44245,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "cash_replay_oos_predev_outcomes.csv",
+      "bytes": 1130386,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "c0d40f06cbd2ade866fa14514d66ff47ecf48fa569f798ad59196f624193706d",
+      "generated_by": "cash_replay generator source unavailable; not inferred from filename",
+      "id": "A08",
+      "interval_overlaps": [
+        "A07",
+        "A09",
+        "A18"
+      ],
+      "range_raw": [
+        1767047700,
+        1787230200
+      ],
+      "rows": 3622,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "cash_replay_oos_v3_decisions.csv",
+      "bytes": 6798752,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "5a28e0e5d4cb04c4138742560182ca34c7b1aaa82de488bdd1e7edfe7cd957f4",
+      "generated_by": "cash_replay generator source unavailable; not inferred from filename",
+      "id": "A09",
+      "interval_overlaps": [
+        "A01",
+        "A02",
+        "A04",
+        "A07",
+        "A08",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A14",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A21",
+        "A22",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34",
+        "A35"
+      ],
+      "range_raw": [
+        1767046200,
+        1789771800
+      ],
+      "rows": 49881,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "cash_replay_v3_decisions.csv",
+      "bytes": 668290,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "e6f1e8290a60f0da38929977a5604b1b7d199075a1b957bb194c612a0c2ab740",
+      "generated_by": "cash_replay generator source unavailable; not inferred from filename",
+      "id": "A10",
+      "interval_overlaps": [
+        "A09",
+        "A11",
+        "A12",
+        "A13",
+        "A14",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34",
+        "A35"
+      ],
+      "range_raw": [
+        1787276400,
+        1789566600
+      ],
+      "rows": 4881,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "cash_replay_v3_outcomes.csv",
+      "bytes": 172537,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "535835981f878cccbe5230dea9490cf5952750f5b5567fa2cf2a2d61ad1d8da3",
+      "generated_by": "cash_replay generator source unavailable; not inferred from filename",
+      "id": "A11",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A12",
+        "A13",
+        "A14",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34",
+        "A35"
+      ],
+      "range_raw": [
+        1787277600,
+        1789565100
+      ],
+      "rows": 549,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "cash_replay_v3_outcomes_40bar.csv",
+      "bytes": 173495,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "9b0fa66d63ae593dd240a9b1ecd3fa8891c36a4d6541cac6f577f09618dc16d5",
+      "generated_by": "cash_replay generator source unavailable; not inferred from filename",
+      "id": "A12",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A13",
+        "A14",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34",
+        "A35"
+      ],
+      "range_raw": [
+        1787277600,
+        1789565100
+      ],
+      "rows": 549,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "cash_replay_v3_outcomes_80bar.csv",
+      "bytes": 172537,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "535835981f878cccbe5230dea9490cf5952750f5b5567fa2cf2a2d61ad1d8da3",
+      "generated_by": "cash_replay generator source unavailable; not inferred from filename",
+      "id": "A13",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A14",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34",
+        "A35"
+      ],
+      "range_raw": [
+        1787277600,
+        1789565100
+      ],
+      "rows": 549,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "decisions.csv",
+      "bytes": 995,
+      "classification": "LIVE research journal / prior use",
+      "file_sha256": "bfdc175a324db17107cbee08db9cfece2a94e187b2d1567a7d90ff3952390ae0",
+      "generated_by": "market_monitor.py",
+      "id": "A14",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A18",
+        "A35"
+      ],
+      "range_raw": [
+        1789561800,
+        1789561800
+      ],
+      "rows": 1,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "execution_baseline_report.md",
+      "bytes": 3254,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "610e978ebf312f11ccff0eff8b273319d2fb5cd53c21b27c64578ad5ac22d1ab",
+      "generated_by": "execution_baseline.py schema; exact invocation not recorded",
+      "id": "A15",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A14",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34",
+        "A35"
+      ],
+      "range_basis": "associated execution_baseline_snapshot.json; report/DB range not independently reconstructed",
+      "range_raw": [
+        1787233500,
+        1789566600
+      ],
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "execution_baseline_snapshot.json",
+      "bytes": 620035,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "d708042e72faf56e7c5775941960ebffc8c92ba6712378f6c6662137cc313d40",
+      "generated_by": "execution_baseline.py schema; exact invocation not recorded",
+      "id": "A16",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A14",
+        "A15",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34",
+        "A35"
+      ],
+      "range_raw": [
+        1787233500,
+        1789566600
+      ],
+      "rows": 5000,
+      "settings_hash": "076fff522da50c0059a07b41ef56d2d13187754f883b76b0ad0a3ae98b525a98",
+      "stored_envelope_hash": "8613c45826cf56b82bbd1b78cf194c4a7dcb346471f9cdfee7e8d65331403272",
+      "stored_source_hashes": {
+        "execution_baseline.py": "0cc5d6e6940dbc6d25b7b38396436476cd249ce12923a1caeec5c67f94c492dd",
+        "strategy_filter.py": "78f87cd0ae6cb47399b8084fad31f15c01550e93842f2d9a271382f117fc8ea2"
+      }
+    },
+    {
+      "artifact": "execution_baseline_trades.csv",
+      "bytes": 99807,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "88225dcb858d760eea295597337dae5ad3c1f5cdd2635aec65eb1d569f9df700",
+      "generated_by": "execution_baseline.py",
+      "id": "A17",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34"
+      ],
+      "range_raw": [
+        1787300700,
+        1789551600
+      ],
+      "rows": 609,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "execution_oos_50000.json",
+      "bytes": 6179943,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "82414d5389493da74f4bbab055fbf28e91dfc318379b45b559747a0c916994cc",
+      "generated_by": "execution_baseline.py schema; exact invocation not recorded",
+      "id": "A18",
+      "interval_overlaps": [
+        "A01",
+        "A02",
+        "A04",
+        "A07",
+        "A08",
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A14",
+        "A15",
+        "A16",
+        "A17",
+        "A20",
+        "A21",
+        "A22",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34",
+        "A35"
+      ],
+      "range_raw": [
+        1767010500,
+        1789771800
+      ],
+      "rows": 50000,
+      "settings_hash": "076fff522da50c0059a07b41ef56d2d13187754f883b76b0ad0a3ae98b525a98",
+      "stored_envelope_hash": "27f38cc42a2b32d7fc444b21512320c875864611b277e44d552906864e8e292c",
+      "stored_source_hashes": {
+        "execution_baseline.py": "0cc5d6e6940dbc6d25b7b38396436476cd249ce12923a1caeec5c67f94c492dd",
+        "strategy_filter.py": "78f87cd0ae6cb47399b8084fad31f15c01550e93842f2d9a271382f117fc8ea2"
+      }
+    },
+    {
+      "artifact": "execution_oos_older_50000.json",
+      "bytes": 6171096,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "01ac22241948623c92c181b377596c52bbf3a316ba3390c490807ef346185a75",
+      "generated_by": "execution_baseline.py schema; exact invocation not recorded",
+      "id": "A19",
+      "interval_overlaps": [
+        "A05",
+        "A06"
+      ],
+      "range_raw": [
+        1744603500,
+        1767010200
+      ],
+      "rows": 50000,
+      "settings_hash": "076fff522da50c0059a07b41ef56d2d13187754f883b76b0ad0a3ae98b525a98",
+      "stored_envelope_hash": "81e425abe5096b75eb4773ab1c32aeb6fc74201fbe4b957a90c4ea50d6b37b6d",
+      "stored_source_hashes": {
+        "execution_baseline.py": "0cc5d6e6940dbc6d25b7b38396436476cd249ce12923a1caeec5c67f94c492dd",
+        "strategy_filter.py": "78f87cd0ae6cb47399b8084fad31f15c01550e93842f2d9a271382f117fc8ea2"
+      }
+    },
+    {
+      "artifact": "filter_validation.md",
+      "bytes": 1816,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "27966dbe73af6521f01d9996a7be7b59792e162dffa45473985a28e380e0733e",
+      "generated_by": "filter_validation.py",
+      "id": "A20",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34"
+      ],
+      "range_basis": "associated replay_decisions.csv; report/DB range not independently reconstructed",
+      "range_raw": [
+        1787296500,
+        1789556400
+      ],
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "live_ai_bridge.sqlite3",
+      "bytes": 24576,
+      "classification": "Legacy/pilot research ledger; not a holdout",
+      "file_sha256": "498af4d86815443b78b90d70cfd807707af28073b9ffdeab87b4fc9f13e046f5",
+      "generated_by": "live_ai_bridge.py (see provenance exceptions)",
+      "id": "A21",
+      "interval_overlaps": [
+        "A09",
+        "A18"
+      ],
+      "range_raw": [
+        1789628400,
+        1789628400
+      ],
+      "rows": 1,
+      "settings_hash": "f0658f3596f8e695060a3b0ebc30801d0b2a3611252ef13a4b6f6ead5d38344a",
+      "stored_source_hashes": {
+        "live_ai_bridge.py": "899eeb886712a808b7dfb39250aaf8d6ed427144f05c1dbad934f99afad5488f",
+        "live_ai_core.py": "d205a687ec6c26bb23c1881ea144c1a8b6e275c2b605d03b8ca45644eb315a88"
+      }
+    },
+    {
+      "artifact": "live_ai_bridge_after_429.sqlite3",
+      "bytes": 24576,
+      "classification": "Legacy/pilot research ledger; not a holdout",
+      "file_sha256": "29fa567a696bc203e94025bf49c4d8f53a1e7dc7d772b248f641f4721d718bcc",
+      "generated_by": "live_ai_resume_after_429.py / AttemptLedger",
+      "id": "A22",
+      "interval_overlaps": [
+        "A09",
+        "A18"
+      ],
+      "range_raw": [
+        1789710300,
+        1789710300
+      ],
+      "rows": 1,
+      "settings_hash": "4ab536199e993163924a1dea16bc61dd31ac8d0ca2c34e0dc3e3c4030ab9d12e",
+      "stored_source_hashes": {
+        "live_ai_bridge.py": "899eeb886712a808b7dfb39250aaf8d6ed427144f05c1dbad934f99afad5488f",
+        "live_ai_core.py": "d205a687ec6c26bb23c1881ea144c1a8b6e275c2b605d03b8ca45644eb315a88"
+      }
+    },
+    {
+      "artifact": "openai_blind.sqlite3",
+      "bytes": 204800,
+      "classification": "Legacy/pilot research ledger; not a holdout",
+      "file_sha256": "4572ea55f8e9fef81d60027598fddb3743c10eb17112ed51e6cd10b443e8fd58",
+      "generated_by": "openai_blind_validation.py / PilotStore",
+      "id": "A23",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34"
+      ],
+      "range_basis": "associated openai_pilot_decisions.csv; report/DB range not independently reconstructed",
+      "range_raw": [
+        1788919800,
+        1789556400
+      ],
+      "rows": 10,
+      "settings_hash": null,
+      "stored_plan_fingerprint": "82749112a187b01156b7fd9de25e484d5745eaf759cf653a182ad54f2a19f940",
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "openai_blind_comparison.csv",
+      "bytes": 6755,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "602bdcb87dc31c545373c475d1f5b913699fe4689710547dba392982548abdb2",
+      "generated_by": "openai_blind_validation.py",
+      "id": "A24",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34"
+      ],
+      "range_basis": "associated openai_pilot_decisions.csv; report/DB range not independently reconstructed",
+      "range_raw": [
+        1788919800,
+        1789556400
+      ],
+      "rows": 10,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "openai_blind_report.md",
+      "bytes": 3708,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "065ce2e2b812b78ff5849f74995957ea7cfdeb881598a1a35a6813930ccf9f8a",
+      "generated_by": "openai_holdout_validation.py (exploratory pilot)",
+      "id": "A25",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34"
+      ],
+      "range_basis": "associated openai_pilot_decisions.csv; report/DB range not independently reconstructed",
+      "range_raw": [
+        1788919800,
+        1789556400
+      ],
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "openai_pilot.sqlite3",
+      "bytes": 110592,
+      "classification": "Legacy/pilot research ledger; not a holdout",
+      "file_sha256": "31372f974a681ea757f14fe9efa830c9fd2bdf5e3a7b77a4d6313e7af4d45c64",
+      "generated_by": "openai_holdout_validation.py / PilotStore",
+      "id": "A26",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34"
+      ],
+      "range_basis": "associated openai_pilot_decisions.csv; report/DB range not independently reconstructed",
+      "range_raw": [
+        1788919800,
+        1789556400
+      ],
+      "rows": 10,
+      "settings_hash": null,
+      "stored_plan_fingerprint": "a345a96856c4a11b2858162c4d4dfa80f0a02ead488a5b6ae046d38af2896a05",
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "openai_pilot_decisions.csv",
+      "bytes": 8049,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "1f095526acdd4d445344c4b5e35f2510371f1616dc9d159fad08a9d0a0b9a0b8",
+      "generated_by": "openai_holdout_validation.py (exploratory pilot)",
+      "id": "A27",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34"
+      ],
+      "range_raw": [
+        1788919800,
+        1789556400
+      ],
+      "rows": 10,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "openai_pilot_outcomes.csv",
+      "bytes": 7666,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "b7bafb0b7f9ed6105e4d1be86ea37f2480fc001d2744403cb19e29c717bc760d",
+      "generated_by": "openai_holdout_validation.py (exploratory pilot)",
+      "id": "A28",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34"
+      ],
+      "range_raw": [
+        1788919800,
+        1789556400
+      ],
+      "rows": 10,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "openai_pilot_report.md",
+      "bytes": 2566,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "b832833b60106b283793fa767a546905cbffe63f9fee341dc887e6bd8f1d5d12",
+      "generated_by": "openai_holdout_validation.py (exploratory pilot)",
+      "id": "A29",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A30",
+        "A31",
+        "A32",
+        "A33",
+        "A34"
+      ],
+      "range_basis": "associated openai_pilot_decisions.csv; report/DB range not independently reconstructed",
+      "range_raw": [
+        1788919800,
+        1789556400
+      ],
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "openai_sample_audit.csv",
+      "bytes": 2598,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "1469049a22c922e6f2670cc2d938c8c63e8527c6cc7b6a8136b80d67294f8f96",
+      "generated_by": "sample_audit.py",
+      "id": "A30",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A31",
+        "A32",
+        "A33",
+        "A34"
+      ],
+      "range_basis": "associated openai_pilot_decisions.csv; report/DB range not independently reconstructed",
+      "range_raw": [
+        1788919800,
+        1789556400
+      ],
+      "rows": 10,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "openai_sample_audit.md",
+      "bytes": 8156,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "1b832e8d99f7303d770977cf20a5b95d1340c1842ccd64198cc932c2c1560bf3",
+      "generated_by": "sample_audit.py",
+      "id": "A31",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A32",
+        "A33",
+        "A34"
+      ],
+      "range_basis": "associated openai_pilot_decisions.csv; report/DB range not independently reconstructed",
+      "range_raw": [
+        1788919800,
+        1789556400
+      ],
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "replay_decisions.csv",
+      "bytes": 1959168,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "cd6b5fc02de01420e9bb2ead2a078b69d6f6f5a441404d9456c81ee59a58d04e",
+      "generated_by": "historical_replay.py",
+      "id": "A32",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A33",
+        "A34"
+      ],
+      "range_raw": [
+        1787296500,
+        1789556400
+      ],
+      "rows": 4780,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "replay_outcomes.csv",
+      "bytes": 1292571,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "ccfed9f12b59408b1301b15e99e3756222555a2c3f5427d4985a4d886148ed50",
+      "generated_by": "historical_replay.py",
+      "id": "A33",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A34"
+      ],
+      "range_raw": [
+        1787296500,
+        1789556400
+      ],
+      "rows": 4780,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "replay_report.md",
+      "bytes": 1948,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "445f0781ac2bcb8b8a4273be97ddcd333a45cd6a0dfd5dc0180d5139251ff5ee",
+      "generated_by": "historical_replay.py",
+      "id": "A34",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A20",
+        "A23",
+        "A24",
+        "A25",
+        "A26",
+        "A27",
+        "A28",
+        "A29",
+        "A30",
+        "A31",
+        "A32",
+        "A33"
+      ],
+      "range_basis": "associated replay_decisions.csv; report/DB range not independently reconstructed",
+      "range_raw": [
+        1787296500,
+        1789556400
+      ],
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "research_report.md",
+      "bytes": 807,
+      "classification": "EXPLORATORY / prior use, not clean holdout",
+      "file_sha256": "0ad6a89a59d55259357a498ec8fb574c845eba267589ecabcd583aad3da04602",
+      "generated_by": "research_report.py",
+      "id": "A35",
+      "interval_overlaps": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A14",
+        "A15",
+        "A16",
+        "A18"
+      ],
+      "range_basis": "associated decisions.csv; report/DB range not independently reconstructed",
+      "range_raw": [
+        1789561800,
+        1789561800
+      ],
+      "settings_hash": null,
+      "stored_source_hashes": null
+    },
+    {
+      "artifact": "signals.csv",
+      "bytes": 1942,
+      "classification": "LIVE research journal / prior use",
+      "file_sha256": "c8f6a2665d3780597849d5af9ff204dcd8c7dc51e6bdc4d5ab84c55e87ddc924",
+      "generated_by": "market_monitor.py",
+      "id": "A36",
+      "interval_overlaps": [],
+      "range_raw": null,
+      "rows": 4,
+      "settings_hash": null,
+      "stored_source_hashes": null
+    }
+  ],
+  "known_exposure_ranges": [
+    {
+      "artifact": "cash_demo.sqlite3",
+      "first_bar_raw": 1789722300,
+      "last_bar_raw": 1789731600,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "cash_ensemble_v3.sqlite3",
+      "first_bar_raw": 1789742400,
+      "last_bar_raw": 1789742400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "cash_pilot_v2.sqlite3",
+      "first_bar_raw": 1789733700,
+      "last_bar_raw": 1789741200,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "cash_replay_oos_older_v3_decisions.csv",
+      "first_bar_raw": 1744639200,
+      "last_bar_raw": 1767010200,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "cash_replay_oos_older_v3_outcomes.csv",
+      "first_bar_raw": 1744644000,
+      "last_bar_raw": 1766997900,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "cash_replay_oos_predev_decisions.csv",
+      "first_bar_raw": 1767046200,
+      "last_bar_raw": 1787233200,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "cash_replay_oos_predev_outcomes.csv",
+      "first_bar_raw": 1767047700,
+      "last_bar_raw": 1787230200,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "cash_replay_oos_v3_decisions.csv",
+      "first_bar_raw": 1767046200,
+      "last_bar_raw": 1789771800,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "cash_replay_v3_decisions.csv",
+      "first_bar_raw": 1787276400,
+      "last_bar_raw": 1789566600,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "cash_replay_v3_outcomes.csv",
+      "first_bar_raw": 1787277600,
+      "last_bar_raw": 1789565100,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "cash_replay_v3_outcomes_40bar.csv",
+      "first_bar_raw": 1787277600,
+      "last_bar_raw": 1789565100,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "cash_replay_v3_outcomes_80bar.csv",
+      "first_bar_raw": 1787277600,
+      "last_bar_raw": 1789565100,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "decisions.csv",
+      "first_bar_raw": 1789561800,
+      "last_bar_raw": 1789561800,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "execution_baseline_report.md",
+      "first_bar_raw": 1787233500,
+      "last_bar_raw": 1789566600,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "execution_baseline_snapshot.json",
+      "first_bar_raw": 1787233500,
+      "last_bar_raw": 1789566600,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "execution_baseline_trades.csv",
+      "first_bar_raw": 1787300700,
+      "last_bar_raw": 1789551600,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "execution_oos_50000.json",
+      "first_bar_raw": 1767010500,
+      "last_bar_raw": 1789771800,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "execution_oos_older_50000.json",
+      "first_bar_raw": 1744603500,
+      "last_bar_raw": 1767010200,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "filter_validation.md",
+      "first_bar_raw": 1787296500,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "live_ai_bridge.sqlite3",
+      "first_bar_raw": 1789628400,
+      "last_bar_raw": 1789628400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "live_ai_bridge_after_429.sqlite3",
+      "first_bar_raw": 1789710300,
+      "last_bar_raw": 1789710300,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "openai_blind.sqlite3",
+      "first_bar_raw": 1788919800,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "openai_blind_comparison.csv",
+      "first_bar_raw": 1788919800,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "openai_blind_report.md",
+      "first_bar_raw": 1788919800,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "openai_pilot.sqlite3",
+      "first_bar_raw": 1788919800,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "openai_pilot_decisions.csv",
+      "first_bar_raw": 1788919800,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "openai_pilot_outcomes.csv",
+      "first_bar_raw": 1788919800,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "openai_pilot_report.md",
+      "first_bar_raw": 1788919800,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "openai_sample_audit.csv",
+      "first_bar_raw": 1788919800,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "openai_sample_audit.md",
+      "first_bar_raw": 1788919800,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "replay_decisions.csv",
+      "first_bar_raw": 1787296500,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "replay_outcomes.csv",
+      "first_bar_raw": 1787296500,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "replay_report.md",
+      "first_bar_raw": 1787296500,
+      "last_bar_raw": 1789556400,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    },
+    {
+      "artifact": "research_report.md",
+      "first_bar_raw": 1789561800,
+      "last_bar_raw": 1789561800,
+      "symbol": "XAUUSD",
+      "timeframe": "M5"
+    }
+  ],
+  "schema_version": "replay-data-inventory-v1"
+}
